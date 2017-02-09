@@ -34,6 +34,8 @@ Game of Light Installation
 - attiny85 possible? may not have enough pins; but might
 - atmega328p?
 - arduino pro mini clone ($1-2)
+- 1 master device with 36 other devices. The master controls the CA simulation and dictates the animation colors and patterns to each of the 36 stations.
+    - however, it is possible to have the 36 devices run the simulation themselves, with each device getting data about it's neighbors, and computing the next step and selecting it's own animation. This would also require that they all synchronize, to some degree on an update algorithm. This could be done. Would be really nice to have. This is something we could first develop in the master/slave configuration, and then later spend time developing the slave-only method if there is time. The slave-only would really connect conceptually rather than having any kind of single master.
 
 ## Recognition
 - manual input (what a drag)
