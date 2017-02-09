@@ -38,13 +38,14 @@ Game of Light Installation
 ## Recognition
 - manual input (what a drag)
 - infrared linear quadrature encoder or similar to recognize the lamp 'species' as a barcode when the lamp shade is slide over the rod
--- this would argue for a separate controller on each station
+    - this would argue for a separate controller on each station
 
 ## Communication
 - if using multiple controllers, one on each station, using a multidrop bus (https://en.wikipedia.org/wiki/Multidrop_bus) rather than a shift/ring topology
 - I2C can go about 20ft without additional driver or buffers (http://forum.arduino.cc/index.php?topic=57604.0)
 - RS-232 can go about 50ft (https://www.lammertbies.nl/comm/info/RS-232_specs.html)
+- RS-422 can go about 5000ft, but is single driver/master, and up to 10 receivers. It is differential, so it's more noise immune than rs232, but the primary downside is it is one directional communcation
 - RS-485 can go about 4000ft (http://www.bb-elec.com/Learning-Center/All-White-Papers/Serial/Basics-of-the-RS-485-Standard.aspx)
--- RS-485 to ttl converter using the MAX485CSA (https://www.aliexpress.com/item/MAX485-Module-RS-485-TTL-to-RS485-MAX485CSA-Converter-Module-For-Arduino-Integrated-Circuits-Products/32667981058.html)
---- $0.38
--- needs twisted pair wire
+    - RS-485 to ttl converter using the MAX485CSA (https://www.aliexpress.com/item/MAX485-Module-RS-485-TTL-to-RS485-MAX485CSA-Converter-Module-For-Arduino-Integrated-Circuits-Products/32667981058.html)
+    - $0.38
+    - needs twisted pair wire
