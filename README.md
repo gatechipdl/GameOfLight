@@ -46,6 +46,7 @@ Game of Light Installation
 - RS-232 can go about 50ft (https://www.lammertbies.nl/comm/info/RS-232_specs.html)
 - RS-422 can go about 5000ft, but is single driver/master, and up to 10 receivers. It is differential, so it's more noise immune than rs232, but the primary downside is it is one directional communcation
 - RS-485 can go about 4000ft (http://www.bb-elec.com/Learning-Center/All-White-Papers/Serial/Basics-of-the-RS-485-Standard.aspx)
-    - RS-485 to ttl converter using the MAX485CSA (https://www.aliexpress.com/item/MAX485-Module-RS-485-TTL-to-RS485-MAX485CSA-Converter-Module-For-Arduino-Integrated-Circuits-Products/32667981058.html)
-    - $0.38
-    - needs twisted pair wire
+    - RS-485 to ttl converter using the MAX485CSA
+    - $0.38 (https://www.aliexpress.com/item/MAX485-Module-RS-485-TTL-to-RS485-MAX485CSA-Converter-Module-For-Arduino-Integrated-Circuits-Products/32667981058.html)
+    - needs twisted pair wire (same as RS422); actually can go without twisted pair if run is shorter, so this isn't completely necessary
+    - downside is that RS485 supports up to 32 devices. But I don't think that is built into the protocol. We should be able to go over that. As each device will have it's own way of identifying itself. I think 32 devices is more of a guideline.
