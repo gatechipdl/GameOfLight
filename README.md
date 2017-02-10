@@ -41,6 +41,14 @@ Game of Light Installation
 - manual input (what a drag)
 - infrared linear quadrature encoder or similar to recognize the lamp 'species' as a barcode when the lamp shade is slide over the rod
     - this would argue for a separate controller on each station
+- IR Distance Sensor
+    - [XK-GK-5010A](https://www.aliexpress.com/item/Hot-Sale-Short-Distance-Sensor-Induction-Switch-Dual-Functions-Ir-Sensor-Switch-Active-Performance-Modules-Board/32769983297.html)
+    - [TCRT5000 Sensor](https://www.aliexpress.com/item/20-pcs-TCRT5000L-TCRT5000-Reflective-Optical-Sensor-Infrared-IR-Photoelectric-Switch/1909098476.html)
+    - [TCRT5000 Module with Pot](https://www.aliexpress.com/item/Free-shipping-Line-Track-Sensor-TCRT5000-Infrared-Reflective-IR-Photoelectric-Switch-Barrier/32517344067.html)
+    - [TCRT5000 Module Digital Only](https://www.aliexpress.com/item/New-TCRT5000-Line-Track-Sensor-Module-Reflection-Infrared-Sensor-Switch-Module-For-Arduino-5pcs-lot-Free/32359412782.html)
+    - [TCRT5000 Module Analog Only](https://www.aliexpress.com/item/10PCS-IR-Infrared-Line-Track-Follower-Sensor-TCRT5000-Obstacle-Avoidanc-For-Arduino/32672744833.html)
+    - [4 Channel Line Follower](https://www.aliexpress.com/item/Free-shipping-4-way-infrared-tracing-line-follow-tracking-obatacle-avoidance-Sensor-Module-for-Aduino-Robot/32645816426.html)
+    - [8 Channel Line Follower](https://www.aliexpress.com/item/8-Channel-High-Precision-Infrared-Detection-Tracking-Sensor-Moudle-For-Arduino-Raspberry-Pi-Car-Robot-TCRT5000/32714804808.html)
 
 ## Communication
 - if using multiple controllers, one on each station, using a multidrop bus (https://en.wikipedia.org/wiki/Multidrop_bus) rather than a shift/ring topology
