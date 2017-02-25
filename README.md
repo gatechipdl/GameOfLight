@@ -60,3 +60,4 @@ Game of Light Installation
     - $0.38 (https://www.aliexpress.com/item/MAX485-Module-RS-485-TTL-to-RS485-MAX485CSA-Converter-Module-For-Arduino-Integrated-Circuits-Products/32667981058.html)
     - needs twisted pair wire (same as RS422); actually can go without twisted pair if run is shorter, so this isn't completely necessary
     - downside is that RS485 supports up to 32 devices. But I don't think that is built into the protocol. We should be able to go over that. As each device will have it's own way of identifying itself. I think 32 devices is more of a guideline.
+    - RS-485 might need a 3.3V version like the SP3485 (https://www.aliexpress.com/item/3-3V-UART-serial-to-RS485-SP3485-Transceiver-Converter-Communication-Module/32224154908.html). This board is lower cost than if we were to purchase just the chip and integrate it into our own design.
