@@ -22,13 +22,29 @@ Game of Light Installation
 - Switch mode power supply for high current, such as this [300W Step Down Regulator](https://www.aliexpress.com/item/DC-CC-12A-300W-Step-Down-Buck-Converter-7-32V-To-0-8-28V-Power-module/32247251105.html)
 - Linear regulator for low current needs (eg. if using 12V main power supply and 12V leds)
 
-## Power Delivery
+## Power Distribution Connectors
 - ribbon cable (40 pin), using most pins for power and ground
 - RJ45 can only handle up to 1A
 - RJ11 can only handle up to 1A
 - 5557 molex need to crimp; not designed to be removed often;
 - DC Barrel Jack 5.5mm, most connectors designed for 3A, but can get special ones for laptaps that can handle 8A
-- [Pluggable Screw Terminal](https://www.aliexpress.com/item/Free-shipping-5-sets-ht5-08-6pin-Terminal-plug-type-300V-10A-5-08mm-pitch-connector/32667091061.html)
+- [6 pin Pluggable Screw Terminal](https://www.aliexpress.com/item/Free-shipping-5-sets-ht5-08-6pin-Terminal-plug-type-300V-10A-5-08mm-pitch-connector/32667091061.html)
+    - 12V - GND - DataMinus - DataPlus - GND - 12V
+- [7 pin Pluggable Screw Terminal](https://www.aliexpress.com/item/Free-shipping-5-sets-ht5-08-7pin-Terminal-plug-type-300V-10A-5-08mm-pitch-connector/32665369867.html)
+    - 12V - GND - DataMinus - GND - DataPlus - GND - 12V
+    - extra ground in middle is for connecting ground to the main controller in the case that the main controller is not using the same ground as the stations' ground from the main power supply. For example if the main controller is run by or powered by a laptop.
+
+## Power Distribution Wiring
+- [$27 100 ft. 14/2 White Solid SIMpull NM-B Wire](http://www.homedepot.com/p/Romex-100-ft-14-2-White-Solid-SIMpull-NM-B-Wire-28827428/202316379)
+- [$38 100 ft. 14-2 Black Stranded Landscape Lighting Cable](http://www.homedepot.com/p/Southwire-100-ft-14-2-Black-Stranded-Landscape-Lighting-Cable-55213243/202316247)
+- [$16 100' Feet 14 Gauge Red Black Stranded 2 Conductor Speaker Wire Car Home Audio Ga](https://www.amazon.com/Gauge-Black-Stranded-Conductor-Speaker/dp/B00J36SUWC)
+- [$26 eXtreme Products 2 Conductor 14 Gauge Stranded Copper Core Speaker Wire (No Aluminum Core) for Home Theater Speakers Radio Speakers Car Audio or Any Audio Interface - 100 Foot Clear Coat](https://www.amazon.com/eXtreme-Conductor-Speaker-Wire-Interface/dp/B01HBWJ1HM)
+
+## Signal Distribution Wiring
+- for RS485 we need overall impedance of 120 ohms. For our distances, lighter gauges are fine, but [this](http://www.chipkin.com/rs485-cables-why-you-need-3-wires-for-2-two-wire-rs485/) recommends 24AWG or heavier. [Here are more recommendations](http://www.bb-elec.com/Learning-Center/All-White-Papers/Serial/Cable-Selection-for-RS422-and-RS485-Systems/Cable-Selection-for-RS-422-and-RS-485-Systems.PDF).
+- Two wire or Three wire. May need three wire to include an additional ground in the case that the main controller is not using the same ground as the stations' power ground from the main power supply. This could be the case with a laptop for example.
+- [$13 Ethernet Cable (100 Feet)](https://www.amazon.com/Mediabridge-Ethernet-Cable-100-Feet/dp/B003RCEAB8), cut and pull out twisted pair wires
+- [$23 100-Feet 24-Gauge 4 Pair Cat 5e](https://www.amazon.com/Southwire-56917643-100-Feet-Outdoor-CMR-75-Degree/dp/B005V0BJ1S)
 
 ## LEDs
 - addressable color leds
