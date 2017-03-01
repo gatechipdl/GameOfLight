@@ -58,7 +58,7 @@ Game of Light Installation
     - [8 Channel Line Follower](https://www.aliexpress.com/item/8-Channel-High-Precision-Infrared-Detection-Tracking-Sensor-Moudle-For-Arduino-Raspberry-Pi-Car-Robot-TCRT5000/32714804808.html)
 
 ## Communication
-- if using multiple controllers, one on each station, using a multidrop bus (https://en.wikipedia.org/wiki/Multidrop_bus) rather than a shift/ring topology
+- if using multiple controllers, one on each station, using a [multidrop bus](https://en.wikipedia.org/wiki/Multidrop_bus) rather than a shift/ring topology
 - I2C can go about [20ft](http://forum.arduino.cc/index.php?topic=57604.0) without additional driver or buffers
 - RS-232 can go about [50ft](https://www.lammertbies.nl/comm/info/RS-232_specs.html)
 - RS-422 can go about 5000ft, but is single driver/master, and up to 10 receivers. It is differential, so it's more noise immune than rs232, but the primary downside is it is one directional communcation
