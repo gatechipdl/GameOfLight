@@ -1,4 +1,4 @@
-update=3/22/2017 12:02:09 AM
+update=3/22/2017 12:01:22 AM
 version=1
 last_client=kicad
 [pcbnew]
@@ -56,14 +56,13 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-LibName30=C:/Sync/Projects/KiCad/KiCadParts.pretty/myParts
 [schematic_editor]
 version=1
 PageLayoutDescrFile=
 PlotDirectoryName=
 SubpartIdSeparator=0
 SubpartFirstId=65
-NetFmtName=Pcbnew
+NetFmtName=
 SpiceForceRefPrefix=0
 SpiceUseNetNumbers=0
 LabSize=60
