@@ -1,0 +1,437 @@
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:GOLReader_RevA-cache
+EELAYER 25 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title "GOLReader"
+Date "2017-03-20"
+Rev "A"
+Comp "Matthew Swarts"
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L TLP785 U1
+U 1 1 58D08248
+P 4150 2750
+F 0 "U1" H 3950 2950 50  0000 L CNN
+F 1 "TLP785" H 4150 2950 50  0000 L CNN
+F 2 "MyKiCadParts:TCRT5000" H 3950 2550 50  0000 L CIN
+F 3 "" H 4150 2750 50  0000 L CNN
+	1    4150 2750
+	1    0    0    -1  
+$EndComp
+Text GLabel 3550 1650 0    60   Input ~ 0
+V33
+$Comp
+L C C2
+U 1 1 58D083C8
+P 2750 3350
+F 0 "C2" H 2775 3450 50  0000 L CNN
+F 1 "0.1uF" H 2775 3250 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0805" H 2788 3200 50  0001 C CNN
+F 3 "" H 2750 3350 50  0000 C CNN
+	1    2750 3350
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R1
+U 1 1 58D0847D
+P 3750 2400
+F 0 "R1" V 3830 2400 50  0000 C CNN
+F 1 "1K" V 3750 2400 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 3680 2400 50  0001 C CNN
+F 3 "" H 3750 2400 50  0000 C CNN
+	1    3750 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R2
+U 1 1 58D08574
+P 4550 2400
+F 0 "R2" V 4630 2400 50  0000 C CNN
+F 1 "10K" V 4550 2400 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 4480 2400 50  0001 C CNN
+F 3 "" H 4550 2400 50  0000 C CNN
+	1    4550 2400
+	1    0    0    -1  
+$EndComp
+Text GLabel 3550 3150 0    60   Input ~ 0
+GND
+$Comp
+L POT RV1
+U 1 1 58D0870E
+P 4850 2450
+F 0 "RV1" H 4850 2370 50  0000 C CNN
+F 1 "10K POT" H 4850 2450 50  0000 C CNN
+F 2 "Potentiometers:Potentiometer_Bourns_3296W_3-8Zoll_Inline_ScrewUp" H 4850 2450 50  0001 C CNN
+F 3 "" H 4850 2450 50  0000 C CNN
+	1    4850 2450
+	0    1    1    0   
+$EndComp
+$Comp
+L LM393 U3
+U 1 1 58D08967
+P 5450 2550
+F 0 "U3" H 5600 2700 50  0000 C CNN
+F 1 "LM393" H 5700 2400 50  0000 C CNN
+F 2 "Housings_SOIC:SOIC-8_3.9x4.9mm_Pitch1.27mm" H 5450 2550 50  0001 C CNN
+F 3 "" H 5450 2550 50  0000 C CNN
+	1    5450 2550
+	1    0    0    -1  
+$EndComp
+$Comp
+L LM393 U3
+U 2 1 58D089A4
+P 5500 4450
+F 0 "U3" H 5650 4600 50  0000 C CNN
+F 1 "LM393" H 5750 4300 50  0000 C CNN
+F 2 "Housings_SOIC:SOIC-8_3.9x4.9mm_Pitch1.27mm" H 5500 4450 50  0001 C CNN
+F 3 "" H 5500 4450 50  0000 C CNN
+	2    5500 4450
+	1    0    0    -1  
+$EndComp
+$Comp
+L C C3
+U 1 1 58D08DB9
+P 5050 2900
+F 0 "C3" H 5075 3000 50  0000 L CNN
+F 1 "0.1uF" H 5075 2800 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0805" H 5088 2750 50  0001 C CNN
+F 3 "" H 5050 2900 50  0000 C CNN
+	1    5050 2900
+	1    0    0    -1  
+$EndComp
+$Comp
+L C C1
+U 1 1 58D08ED3
+P 2450 3350
+F 0 "C1" H 2475 3450 50  0000 L CNN
+F 1 "10uF" H 2475 3250 50  0000 L CNN
+F 2 "Capacitors_SMD:C_1206" H 2488 3200 50  0001 C CNN
+F 3 "" H 2450 3350 50  0000 C CNN
+	1    2450 3350
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R3
+U 1 1 58D098E8
+P 5850 2300
+F 0 "R3" V 5930 2300 50  0000 C CNN
+F 1 "10K" V 5850 2300 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 5780 2300 50  0001 C CNN
+F 3 "" H 5850 2300 50  0000 C CNN
+	1    5850 2300
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R4
+U 1 1 58D09BCE
+P 6050 2300
+F 0 "R4" V 6130 2300 50  0000 C CNN
+F 1 "1K" V 6050 2300 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 5980 2300 50  0001 C CNN
+F 3 "" H 6050 2300 50  0000 C CNN
+	1    6050 2300
+	1    0    0    -1  
+$EndComp
+$Comp
+L LED D1
+U 1 1 58D09C4A
+P 6050 1950
+F 0 "D1" H 6050 2050 50  0000 C CNN
+F 1 "LED" H 6050 1850 50  0000 C CNN
+F 2 "LEDs:LED-0805" H 6050 1950 50  0001 C CNN
+F 3 "" H 6050 1950 50  0000 C CNN
+	1    6050 1950
+	0    -1   -1   0   
+$EndComp
+$Comp
+L CONN_01X04 P1
+U 1 1 58D0AD9A
+P 7725 3425
+F 0 "P1" H 7725 3675 50  0000 C CNN
+F 1 "CONN_01X04" V 7825 3425 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04" H 7725 3425 50  0001 C CNN
+F 3 "" H 7725 3425 50  0000 C CNN
+	1    7725 3425
+	1    0    0    -1  
+$EndComp
+Text GLabel 6150 2550 2    60   Input ~ 0
+READER1
+Text GLabel 7525 3375 0    60   Input ~ 0
+READER1
+Text GLabel 7525 3475 0    60   Input ~ 0
+READER2
+Text GLabel 7525 3275 0    60   Input ~ 0
+GND
+Text GLabel 7525 3575 0    60   Input ~ 0
+V33
+Text GLabel 3550 3550 0    60   Input ~ 0
+V33
+$Comp
+L R R5
+U 1 1 58D0E4D5
+P 3750 4300
+F 0 "R5" V 3830 4300 50  0000 C CNN
+F 1 "1K" V 3750 4300 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 3680 4300 50  0001 C CNN
+F 3 "" H 3750 4300 50  0000 C CNN
+	1    3750 4300
+	1    0    0    -1  
+$EndComp
+$Comp
+L TLP785 U2
+U 1 1 58D0E735
+P 4150 4650
+F 0 "U2" H 3950 4850 50  0000 L CNN
+F 1 "TLP785" H 4150 4850 50  0000 L CNN
+F 2 "MyKiCadParts:TCRT5000" H 3950 4450 50  0000 L CIN
+F 3 "" H 4150 4650 50  0000 L CNN
+	1    4150 4650
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R6
+U 1 1 58D0E78C
+P 4550 4300
+F 0 "R6" V 4630 4300 50  0000 C CNN
+F 1 "10K" V 4550 4300 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 4480 4300 50  0001 C CNN
+F 3 "" H 4550 4300 50  0000 C CNN
+	1    4550 4300
+	1    0    0    -1  
+$EndComp
+$Comp
+L POT RV2
+U 1 1 58D0E7EA
+P 4850 4350
+F 0 "RV2" H 4850 4270 50  0000 C CNN
+F 1 "10K POT" H 4850 4350 50  0000 C CNN
+F 2 "Potentiometers:Potentiometer_Bourns_3296W_3-8Zoll_Inline_ScrewUp" H 4850 4350 50  0001 C CNN
+F 3 "" H 4850 4350 50  0000 C CNN
+	1    4850 4350
+	0    1    1    0   
+$EndComp
+$Comp
+L R R7
+U 1 1 58D0ED46
+P 5900 4200
+F 0 "R7" V 5980 4200 50  0000 C CNN
+F 1 "10K" V 5900 4200 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 5830 4200 50  0001 C CNN
+F 3 "" H 5900 4200 50  0000 C CNN
+	1    5900 4200
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R8
+U 1 1 58D0EDB6
+P 6100 4200
+F 0 "R8" V 6180 4200 50  0000 C CNN
+F 1 "1K" V 6100 4200 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 6030 4200 50  0001 C CNN
+F 3 "" H 6100 4200 50  0000 C CNN
+	1    6100 4200
+	1    0    0    -1  
+$EndComp
+$Comp
+L LED D2
+U 1 1 58D0EE31
+P 6100 3850
+F 0 "D2" H 6100 3950 50  0000 C CNN
+F 1 "LED" H 6100 3750 50  0000 C CNN
+F 2 "LEDs:LED-0805" H 6100 3850 50  0001 C CNN
+F 3 "" H 6100 3850 50  0000 C CNN
+	1    6100 3850
+	0    -1   -1   0   
+$EndComp
+Text GLabel 6200 4450 2    60   Input ~ 0
+READER2
+Text GLabel 3550 5050 0    60   Input ~ 0
+GND
+Wire Wire Line
+	3750 2550 3750 2650
+Wire Wire Line
+	3750 2650 3850 2650
+Wire Wire Line
+	4450 2650 5150 2650
+Wire Wire Line
+	4550 2650 4550 2550
+Connection ~ 4550 2650
+Wire Wire Line
+	5000 2450 5150 2450
+Wire Wire Line
+	6050 1650 6050 1750
+Wire Wire Line
+	3550 1650 6050 1650
+Wire Wire Line
+	3750 2250 3750 1650
+Connection ~ 3750 1650
+Wire Wire Line
+	4550 2250 4550 1650
+Connection ~ 4550 1650
+Wire Wire Line
+	4850 2300 4850 1650
+Connection ~ 4850 1650
+Wire Wire Line
+	5350 2250 5350 1650
+Connection ~ 5350 1650
+Wire Wire Line
+	5850 2150 5850 1650
+Connection ~ 5850 1650
+Wire Wire Line
+	5750 2550 6150 2550
+Wire Wire Line
+	5850 2450 5850 2550
+Connection ~ 5850 2550
+Wire Wire Line
+	6050 2450 6050 2550
+Connection ~ 6050 2550
+Wire Wire Line
+	3550 3150 5350 3150
+Wire Wire Line
+	5350 3150 5350 2850
+Wire Wire Line
+	5050 2750 5050 2650
+Connection ~ 5050 2650
+Wire Wire Line
+	5050 3050 5050 3150
+Connection ~ 5050 3150
+Wire Wire Line
+	4850 2600 4850 3150
+Connection ~ 4850 3150
+Wire Wire Line
+	3850 2850 3750 2850
+Wire Wire Line
+	3750 2850 3750 3150
+Connection ~ 3750 3150
+Wire Wire Line
+	4450 4550 5200 4550
+Wire Wire Line
+	4550 4550 4550 4450
+Wire Wire Line
+	4450 2850 4550 2850
+Wire Wire Line
+	4550 2850 4550 3150
+Connection ~ 4550 3150
+Wire Wire Line
+	5800 4450 6200 4450
+Wire Wire Line
+	5900 4450 5900 4350
+Wire Wire Line
+	6100 4450 6100 4350
+Connection ~ 5900 4450
+Connection ~ 6100 4450
+Wire Wire Line
+	3550 3550 6100 3550
+Wire Wire Line
+	6100 3550 6100 3650
+Wire Wire Line
+	5900 4050 5900 3550
+Connection ~ 5900 3550
+Wire Wire Line
+	5400 4150 5400 3550
+Connection ~ 5400 3550
+Wire Wire Line
+	5000 4350 5200 4350
+Wire Wire Line
+	4550 4150 4550 3550
+Connection ~ 4550 3550
+Wire Wire Line
+	4850 4200 4850 3550
+Connection ~ 4850 3550
+Wire Wire Line
+	3750 4150 3750 3550
+Connection ~ 3750 3550
+Wire Wire Line
+	3750 4450 3750 4550
+Wire Wire Line
+	3750 4550 3850 4550
+Wire Wire Line
+	3550 5050 5400 5050
+Wire Wire Line
+	5400 5050 5400 4750
+Wire Wire Line
+	4850 4500 4850 5050
+Connection ~ 4850 5050
+Connection ~ 4550 4550
+Wire Wire Line
+	3850 4750 3750 4750
+Wire Wire Line
+	3750 4750 3750 5050
+Connection ~ 3750 5050
+Wire Wire Line
+	4450 4750 4550 4750
+Wire Wire Line
+	4550 4750 4550 5050
+Connection ~ 4550 5050
+$Comp
+L C C4
+U 1 1 58D12546
+P 5100 4800
+F 0 "C4" H 5125 4900 50  0000 L CNN
+F 1 "0.1uF" H 5125 4700 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0805" H 5138 4650 50  0001 C CNN
+F 3 "" H 5100 4800 50  0000 C CNN
+	1    5100 4800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5100 4650 5100 4550
+Connection ~ 5100 4550
+Wire Wire Line
+	5100 4950 5100 5050
+Connection ~ 5100 5050
+Text GLabel 2350 3150 0    60   Input ~ 0
+V33
+Text GLabel 2350 3550 0    60   Input ~ 0
+GND
+Wire Wire Line
+	2350 3150 2750 3150
+Wire Wire Line
+	2450 3150 2450 3200
+Wire Wire Line
+	2750 3150 2750 3200
+Connection ~ 2450 3150
+Wire Wire Line
+	2350 3550 2750 3550
+Wire Wire Line
+	2450 3550 2450 3500
+Wire Wire Line
+	2750 3550 2750 3500
+Connection ~ 2450 3550
+$EndSCHEMATC
