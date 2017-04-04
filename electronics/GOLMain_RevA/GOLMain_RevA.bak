@@ -1318,4 +1318,108 @@ Text Notes 8475 3600 0    60   ~ 0
 Default\nDirectly Connected
 Text Notes 8475 2050 0    60   ~ 0
 Default\nDirectly Connected
+$Comp
+L CONN_01X01 P22
+U 1 1 58D373E5
+P 675 2925
+F 0 "P22" H 675 3025 50  0000 C CNN
+F 1 "CONN_GND" V 775 2925 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_1-5mmDrill" H 675 2925 50  0001 C CNN
+F 3 "" H 675 2925 50  0000 C CNN
+	1    675  2925
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P23
+U 1 1 58D37FCA
+P 675 3125
+F 0 "P23" H 675 3225 50  0000 C CNN
+F 1 "CONN_A" V 775 3125 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_0-8mmDrill" H 675 3125 50  0001 C CNN
+F 3 "" H 675 3125 50  0000 C CNN
+	1    675  3125
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P24
+U 1 1 58D380CA
+P 675 3325
+F 0 "P24" H 675 3425 50  0000 C CNN
+F 1 "CONN_B" V 775 3325 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_0-8mmDrill" H 675 3325 50  0001 C CNN
+F 3 "" H 675 3325 50  0000 C CNN
+	1    675  3325
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P25
+U 1 1 58D381B5
+P 675 3525
+F 0 "P25" H 675 3625 50  0000 C CNN
+F 1 "CONN_V12" V 775 3525 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_1-5mmDrill" H 675 3525 50  0001 C CNN
+F 3 "" H 675 3525 50  0000 C CNN
+	1    675  3525
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P26
+U 1 1 58D386A7
+P 675 3850
+F 0 "P26" H 675 3950 50  0000 C CNN
+F 1 "CONN_GND" V 775 3850 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_1-5mmDrill" H 675 3850 50  0001 C CNN
+F 3 "" H 675 3850 50  0000 C CNN
+	1    675  3850
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P27
+U 1 1 58D386AD
+P 675 4050
+F 0 "P27" H 675 4150 50  0000 C CNN
+F 1 "CONN_A" V 775 4050 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_0-8mmDrill" H 675 4050 50  0001 C CNN
+F 3 "" H 675 4050 50  0000 C CNN
+	1    675  4050
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P28
+U 1 1 58D386B3
+P 675 4250
+F 0 "P28" H 675 4350 50  0000 C CNN
+F 1 "CONN_B" V 775 4250 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_0-8mmDrill" H 675 4250 50  0001 C CNN
+F 3 "" H 675 4250 50  0000 C CNN
+	1    675  4250
+	-1   0    0    1   
+$EndComp
+$Comp
+L CONN_01X01 P29
+U 1 1 58D386B9
+P 675 4450
+F 0 "P29" H 675 4550 50  0000 C CNN
+F 1 "CONN_V12" V 775 4450 50  0000 C CNN
+F 2 "Wire_Pads:SolderWirePad_single_1-5mmDrill" H 675 4450 50  0001 C CNN
+F 3 "" H 675 4450 50  0000 C CNN
+	1    675  4450
+	-1   0    0    1   
+$EndComp
+Text GLabel 875  2925 2    60   Input ~ 0
+GND
+Text GLabel 875  3125 2    60   Input ~ 0
+A
+Text GLabel 875  3325 2    60   Input ~ 0
+B
+Text GLabel 875  3525 2    60   Input ~ 0
+V12
+Text GLabel 875  3850 2    60   Input ~ 0
+GND
+Text GLabel 875  4050 2    60   Input ~ 0
+A
+Text GLabel 875  4250 2    60   Input ~ 0
+B
+Text GLabel 875  4450 2    60   Input ~ 0
+V12
 $EndSCHEMATC
