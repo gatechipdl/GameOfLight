@@ -20,6 +20,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(40, PIN_LED_DATA, NEO_GRB + NEO_KHZ4
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 
+String inputString = "";         // a string to hold incoming data
+boolean stringComplete = false;  // whether the string is complete
+
 void setup() {
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
   #if defined (__AVR_ATtiny85__)
@@ -27,25 +30,28 @@ void setup() {
   #endif
   // End of trinket special code
 
-
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
+
+  // initialize serial:
+  Serial.begin(9600);
+  // reserve 200 bytes for the inputString:
+  inputString.reserve(200);
 }
 
 void loop() {
-  // Some example procedures showing how to display to the pixels:
-  colorWipe(strip.Color(255, 0, 0), 150); // Red
-  colorWipe(strip.Color(0, 255, 0), 150); // Green
-  colorWipe(strip.Color(0, 0, 255), 150); // Blue
-//colorWipe(strip.Color(0, 0, 0, 255), 50); // White RGBW
-  // Send a theater pixel chase in...
-//  theaterChase(strip.Color(127, 127, 127), 50); // White
-//  theaterChase(strip.Color(127, 0, 0), 50); // Red
-//  theaterChase(strip.Color(0, 0, 127), 50); // Blue
 
-  rainbow(50);
-  rainbowCycle(50);
-//  theaterChaseRainbow(50);
+  // print the string when a newline arrives:
+  if (stringComplete) {
+    //Serial.println(inputString);
+
+    byte inputByte = inputString.toInt(); //should be less than 256
+    colorWipe(Wheel(inputByte),100);
+    
+    // clear the string:
+    inputString = "";
+    stringComplete = false;
+  }
 }
 
 // Fill the dots one after the other with a color
