@@ -4,6 +4,7 @@
 #endif
 
 #define PIN_LED_DATA 4
+#define PIN_RS485_RECEIVE 13
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -13,7 +14,7 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(40, PIN_LED_DATA, NEO_GRB + NEO_KHZ400);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(45, PIN_LED_DATA, NEO_GRB + NEO_KHZ400);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -33,6 +34,8 @@ void setup() {
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
 
+  pinMode(PIN_RS485_RECEIVE,OUTPUT);
+  digitalWrite(PIN_RS485_RECEIVE,LOW); //listen mode
   // initialize serial:
   Serial.begin(9600);
   // reserve 200 bytes for the inputString:
@@ -40,13 +43,13 @@ void setup() {
 }
 
 void loop() {
-
+  checkSerialEvent();
   // print the string when a newline arrives:
   if (stringComplete) {
-    //Serial.println(inputString);
+    Serial.println(inputString);
 
     byte inputByte = inputString.toInt(); //should be less than 256
-    colorWipe(Wheel(inputByte),100);
+    colorWipe(Wheel(inputByte),20);
     
     // clear the string:
     inputString = "";
@@ -145,7 +148,7 @@ uint32_t Wheel(byte WheelPos) {
  time loop() runs, so using delay inside loop can delay
  response.  Multiple bytes of data may be available.
  */
-void serialEvent() {
+void checkSerialEvent() {
   while (Serial.available()) {
     // get the new byte:
     char inChar = (char)Serial.read();
