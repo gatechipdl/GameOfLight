@@ -17,7 +17,7 @@ private static final int STATION_LED_SEGMENT_COUNT = 9;
 private static final int COLOR_BYTE_COUNT = 3;
 private static final int STATION_COLOR_COUNT = 180;
 private static final int STATION_BYTE_COUNT = 540;
-private static final int BASE_CYCLE_MILLIS = 5000;
+private static final int BASE_CYCLE_MILLIS = 100000;
 
 int canvasWidth = 600;
 int canvasHeight = 600;
@@ -36,14 +36,14 @@ void setup()
   printArray(Serial.list());
   
   String portName = Serial.list()[0];
-  //sPort = new Serial(this, portName, 57600);
+  sPort = new Serial(this, portName, 57600);
   
   colorMode(HSB,1f);
   updateHuesAndBytes();
 }
 
 void draw() {
-  delay(150);
+  delay(4000);
   background(255);
   updateHuesAndBytes();
   
@@ -52,12 +52,16 @@ void draw() {
       for(int k=0;k<5;k++){
         int colorIndex = (i*6+j)*5+k;
         fill(colors[colorIndex]);
-        rect(canvasWidth/6*i,canvasHeight/6*j+canvasHeight/30*k,canvasWidth/6*(i+1),canvasHeight/6*j+canvasHeight/30*(k+1));
+        rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*k,canvasWidth/6*(j+1),canvasHeight/6*i+canvasHeight/30*(k+1));
       }
     }
   }
   
   sPort.write(packetBytes);
+  printArray(packetBytes);
+  //for(int i=0;i<STATION_BYTE_COUNT;i++){
+  //  sPort.write(255);
+  //}
 }
 
 void updateHuesAndBytes(){
@@ -70,12 +74,26 @@ void updateHuesAndBytes(){
   for(int s=0;s<STATION_COUNT;s++){
     for(int i=0;i<STATION_SEGMENT_COUNT;i++){
       float hueIndex = (hueIndices[i] + s/float(STATION_COUNT));
-      color c = color( hueIndex-floor(hueIndex),1f,1f);
+      //hueIndex = (hueIndices[0] + s/float(STATION_COUNT)); //choose just one of the hue layers
+      hueIndex -= floor(hueIndex);
+      color c = color( hueIndex,1f,1f);
+      //c = color( 0f,1f,1f); //just a solid color
+      //println(hueIndex+":"+int(red(c)*255)+","+int(green(c)*255)+","+int(blue(c)*255));
       int colorIndex = s*STATION_SEGMENT_COUNT+i;
+      //c = color( random(0.0,1.0),1f,1f); //random test
       colors[colorIndex] = c;
-      packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte((c >> 16) & 0xFF); //RED
-      packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte((c >>  8) & 0xFF); //GREEN
-      packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte((c >>  0) & 0xFF); //BLUE
+      //packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = (byte)((c >> 16) & 255); //RED
+      //packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = (byte)((c >>  8) & 255); //GREEN
+      //packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = (byte)((c >>  0) & 255); //BLUE
+      
+      //c = color( 0f,1f,1f); //solid color test
+      //packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = (byte)((c >> 16) & 0xFF); //RED
+      //packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = (byte)((c >> 8) & 0xFF); //GREEN
+      //packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte((c >> 0) & 0xFF); //BLUE
+      
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte(red(c)*255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(blue(c)*255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(green(c)*255);
     }
   }
 }

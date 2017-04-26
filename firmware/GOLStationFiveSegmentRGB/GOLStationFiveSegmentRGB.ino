@@ -25,7 +25,7 @@
 // 35_R4, 35_G4, 35_B4 UPPER MIDDLE SEGMENT
 // 35_R5, 35_G5, 35_B5 UPPER SEGMENT
 
-#define STATION_ID 0
+#define STATION_ID 4
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -34,9 +34,9 @@
 
 #define PIN_LED_DATA 4
 #define PIN_RS485_RECEIVE 13
-#define STATION_LED_COUNT 45
+#define STATION_LED_COUNT 46
 #define STATION_SEGMENT_COUNT 5
-#define STATION_LED_SEGMENT_COUNT (STATION_LED_COUNT/STATION_SEGMENT_COUNT)
+#define STATION_LED_SEGMENT_COUNT 9
 
 //3 bytes of color, 5 segments, 36 stations = 540
 #define COLOR_BYTE_COUNT 3
@@ -52,7 +52,7 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(45, PIN_LED_DATA, NEO_GRB + NEO_KHZ400);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(STATION_LED_COUNT, PIN_LED_DATA, NEO_GRB + NEO_KHZ400);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -61,7 +61,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(45, PIN_LED_DATA, NEO_GRB + NEO_KHZ4
 
 uint32_t lastSerialEventMillis;
 boolean packetComplete = false;  // whether the packet is complete
-volatile uint8_t packetBytes[STATION_BYTE_COUNT];
+volatile byte packetBytes[STATION_BYTE_COUNT];
 volatile uint16_t packetBytesReceivedCount = 0;
 
 uint32_t stationColors[STATION_SEGMENT_COUNT];
@@ -96,20 +96,21 @@ void loop() {
     //rgb1,rgb2,rgb3,rgb4,rgb5
     for(uint8_t i=0; i<STATION_SEGMENT_COUNT;i++){
       stationColors[i] = 
-        ((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)<<16 + //RED
-        ((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)<<8 +  //GREEN
-        ((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2);      //BLUE
+        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]<<16 | //RED
+        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)]<<8 |  //GREEN
+        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)];      //BLUE
     }
     
-    setStationSegmentColors();
+    displayStationSegmentColors();
     packetComplete = false;
   }
 }
 
-void setStationSegmentColors(){
+void displayStationSegmentColors(){
+  strip.setPixelColor(0,0); //first pixel off
   for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
     for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
-      strip.setPixelColor(i*STATION_SEGMENT_COUNT+j,stationColors[i]);
+      strip.setPixelColor(i*STATION_LED_SEGMENT_COUNT+j+1,stationColors[i]);
     }
   }
   strip.show();
