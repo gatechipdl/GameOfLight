@@ -37,7 +37,7 @@ void setup() {
   pinMode(PIN_RS485_RECEIVE,OUTPUT);
   digitalWrite(PIN_RS485_RECEIVE,LOW); //listen mode
   // initialize serial:
-  Serial.begin(9600);
+  Serial.begin(57600);
   // reserve 200 bytes for the inputString:
   inputString.reserve(200);
 }
@@ -49,7 +49,7 @@ void loop() {
     Serial.println(inputString);
 
     byte inputByte = inputString.toInt(); //should be less than 256
-    colorWipe(Wheel(inputByte),20);
+    colorWipe(CodedWheel(inputByte),20);
     
     // clear the string:
     inputString = "";
@@ -140,6 +140,19 @@ uint32_t Wheel(byte WheelPos) {
   }
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
+
+/*
+ * Input a value 0 to 255 to get a pure hue color value.
+ * The colours are a transition r - g - b - back to r.
+ * 0 is full black
+ * 255 is full white
+ */
+uint32_t CodedWheel(byte WheelPos) {
+  if(WheelPos = 0){return 0x000000;}
+  if(WheelPos = 255){return 0xFFFFFF;}
+  return Wheel(WheelPos);
 }
 
 /*

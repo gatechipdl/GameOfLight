@@ -4,6 +4,7 @@
 #endif
 
 #define PIN_LED_DATA 4
+#define PIN_RS485_RECEIVE 13
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -30,6 +31,9 @@ void setup() {
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
+
+  pinMode(PIN_RS485_RECEIVE,OUTPUT);
+  digitalWrite(PIN_RS485_RECEIVE,LOW); //listen mode
 }
 
 void loop() {
