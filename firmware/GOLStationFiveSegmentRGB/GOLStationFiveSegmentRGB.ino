@@ -67,6 +67,12 @@ volatile uint16_t packetBytesReceivedCount = 0;
 uint32_t stationColors[STATION_SEGMENT_COUNT];
 uint8_t stationId = STATION_ID;
 
+boolean doPrepareStationSegmentColors = false;
+uint8_t stationLedColorIndex[STATION_LED_COUNT];
+uint8_t currentLedIndex = 0;
+boolean doShowStrip = false;
+ 
+
 void setup() {
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
   #if defined (__AVR_ATtiny85__)
@@ -76,11 +82,19 @@ void setup() {
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
-
+  
   pinMode(PIN_RS485_RECEIVE,OUTPUT);
   digitalWrite(PIN_RS485_RECEIVE,LOW); //listen mode
-
+  
   lastSerialEventMillis = millis();
+
+  //index once
+  stationLedColorIndex[0]=0; //TODO integrate black pixel as first pixel
+  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
+    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
+      stationLedColorIndex[i*STATION_LED_SEGMENT_COUNT+j+1]=i;
+    }
+  }
   
   // initialize serial:
   Serial.begin(57600);
@@ -88,6 +102,15 @@ void setup() {
 
 void loop() {
   checkSerialEvent();
+
+  if(doShowStrip){
+    strip.show();
+    doShowStrip=false;
+  }
+
+  if(doPrepareStationSegmentColors){
+    prepareStationSegmentColors();
+  }
   
   if (packetComplete) {
     packetBytesReceivedCount = 0; //reset the packet bytes received count
@@ -101,19 +124,26 @@ void loop() {
         packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)];      //BLUE
     }
     
-    displayStationSegmentColors();
+    doPrepareStationSegmentColors = true;
     packetComplete = false;
   }
 }
 
-void displayStationSegmentColors(){
-  strip.setPixelColor(0,0); //first pixel off
-  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
-    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
-      strip.setPixelColor(i*STATION_LED_SEGMENT_COUNT+j+1,stationColors[i]);
-    }
+void prepareStationSegmentColors(){
+  currentLedIndex++;
+  if(currentLedIndex>STATION_LED_COUNT){
+    currentLedIndex=0;
+    doShowStrip=true; //ready to show the strip
   }
-  strip.show();
+  strip.setPixelColor(currentLedIndex,stationColors[stationLedColorIndex[currentLedIndex]]);
+  
+//  strip.setPixelColor(0,0); //first pixel off
+//  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
+//    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
+//      strip.setPixelColor(i*STATION_LED_SEGMENT_COUNT+j+1,stationColors[i]);
+//    }
+//  }
+//  strip.show();
 }
 
 /*

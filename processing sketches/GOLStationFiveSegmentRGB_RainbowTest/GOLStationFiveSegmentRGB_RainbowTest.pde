@@ -17,7 +17,7 @@ private static final int STATION_LED_SEGMENT_COUNT = 9;
 private static final int COLOR_BYTE_COUNT = 3;
 private static final int STATION_COLOR_COUNT = 180;
 private static final int STATION_BYTE_COUNT = 540;
-private static final int BASE_CYCLE_MILLIS = 100000;
+private static final int BASE_CYCLE_MILLIS = 10000;
 
 int canvasWidth = 600;
 int canvasHeight = 600;
@@ -43,7 +43,7 @@ void setup()
 }
 
 void draw() {
-  delay(4000);
+  delay(120);
   background(255);
   updateHuesAndBytes();
   
