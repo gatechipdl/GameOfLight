@@ -25,6 +25,8 @@
 // 35_R4, 35_G4, 35_B4 UPPER MIDDLE SEGMENT
 // 35_R5, 35_G5, 35_B5 UPPER SEGMENT
 
+#define STATION_ID 0
+
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
@@ -63,7 +65,7 @@ volatile uint8_t packetBytes[STATION_BYTE_COUNT];
 volatile uint16_t packetBytesReceivedCount = 0;
 
 uint32_t stationColors[STATION_SEGMENT_COUNT];
-uint8_t stationId = 0;
+uint8_t stationId = STATION_ID;
 
 void setup() {
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
@@ -94,9 +96,9 @@ void loop() {
     //rgb1,rgb2,rgb3,rgb4,rgb5
     for(uint8_t i=0; i<STATION_SEGMENT_COUNT;i++){
       stationColors[i] = 
-        ((stationId+i)*COLOR_BYTE_COUNT+0)<<16 + //RED
-        ((stationId+i)*COLOR_BYTE_COUNT+1)<<8 +  //GREEN
-        ((stationId+i)*COLOR_BYTE_COUNT+2);      //BLUE
+        ((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)<<16 + //RED
+        ((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)<<8 +  //GREEN
+        ((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2);      //BLUE
     }
     
     setStationSegmentColors();
@@ -121,6 +123,11 @@ void setStationSegmentColors(){
  */
 void checkSerialEvent() {
   while (Serial.available()) {
+    
+    if(packetBytesReceivedCount == 0){
+      lastSerialEventMillis = millis(); //reset timer
+    }
+    
     // get the new byte:
     packetBytes[packetBytesReceivedCount] = Serial.read();
     packetBytesReceivedCount++;
