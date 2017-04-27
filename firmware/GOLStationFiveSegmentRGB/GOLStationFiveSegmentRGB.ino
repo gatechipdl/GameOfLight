@@ -25,7 +25,8 @@
 // 35_R4, 35_G4, 35_B4 UPPER MIDDLE SEGMENT
 // 35_R5, 35_G5, 35_B5 UPPER SEGMENT
 
-#define STATION_ID 4
+#define STATION_ID 0
+#define SERIAL_BAUD 57600
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -34,6 +35,7 @@
 
 #define PIN_LED_DATA 4
 #define PIN_RS485_RECEIVE 13
+
 #define STATION_LED_COUNT 46
 #define STATION_SEGMENT_COUNT 5
 #define STATION_LED_SEGMENT_COUNT 9
@@ -61,8 +63,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(STATION_LED_COUNT, PIN_LED_DATA, NEO
 
 uint32_t lastSerialEventMillis;
 boolean packetComplete = false;  // whether the packet is complete
-volatile byte packetBytes[STATION_BYTE_COUNT];
-volatile uint16_t packetBytesReceivedCount = 0;
+byte packetBytesSerialBuffer[STATION_BYTE_COUNT];
+byte packetBytes[STATION_BYTE_COUNT];
+uint16_t packetBytesReceivedCount = 0;
 
 uint32_t stationColors[STATION_SEGMENT_COUNT];
 uint8_t stationId = STATION_ID;
@@ -97,12 +100,12 @@ void setup() {
   }
   
   // initialize serial:
-  Serial.begin(57600);
+  Serial.begin(SERIAL_BAUD);
 }
 
 void loop() {
-  checkSerialEvent();
-
+  checkSerialEvent(); //check the serial event buffer
+  
   if(doShowStrip){
     strip.show();
     doShowStrip=false;
@@ -111,17 +114,20 @@ void loop() {
   if(doPrepareStationSegmentColors){
     prepareStationSegmentColors();
   }
+
+  checkSerialEvent(); //check the serial event buffer again within the loop
   
   if (packetComplete) {
     packetBytesReceivedCount = 0; //reset the packet bytes received count
     lastSerialEventMillis = millis(); //reset timer
+    memcpy(packetBytes, packetBytesSerialBuffer, STATION_BYTE_COUNT);
 
     //rgb1,rgb2,rgb3,rgb4,rgb5
     for(uint8_t i=0; i<STATION_SEGMENT_COUNT;i++){
       stationColors[i] = 
         packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]<<16 | //RED
-        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)]<<8 |  //GREEN
-        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)];      //BLUE
+        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)]<<8 |  //BLUE
+        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)];      //GREEN
     }
     
     doPrepareStationSegmentColors = true;
@@ -129,21 +135,15 @@ void loop() {
   }
 }
 
+//load one led color value per loop to distribute the blocking of the slow setPixelColor method
 void prepareStationSegmentColors(){
+  strip.setPixelColor(currentLedIndex,stationColors[stationLedColorIndex[currentLedIndex]]);
   currentLedIndex++;
   if(currentLedIndex>STATION_LED_COUNT){
     currentLedIndex=0;
+    doPrepareStationSegmentColors=false; //done with loading led colors into the strip
     doShowStrip=true; //ready to show the strip
   }
-  strip.setPixelColor(currentLedIndex,stationColors[stationLedColorIndex[currentLedIndex]]);
-  
-//  strip.setPixelColor(0,0); //first pixel off
-//  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
-//    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
-//      strip.setPixelColor(i*STATION_LED_SEGMENT_COUNT+j+1,stationColors[i]);
-//    }
-//  }
-//  strip.show();
 }
 
 /*
@@ -155,14 +155,10 @@ void prepareStationSegmentColors(){
 void checkSerialEvent() {
   while (Serial.available()) {
     
-    if(packetBytesReceivedCount == 0){
-      lastSerialEventMillis = millis(); //reset timer
-    }
-    
-    // get the new byte:
-    packetBytes[packetBytesReceivedCount] = Serial.read();
+    // get the next new byte:
+    packetBytesSerialBuffer[packetBytesReceivedCount] = Serial.read();
     packetBytesReceivedCount++;
-    if (packetBytesReceivedCount == STATION_BYTE_COUNT_MINUS_ONE) {
+    if (packetBytesReceivedCount == STATION_BYTE_COUNT) {
       packetComplete = true; //flag the packet to be processed
     }
   }

@@ -41,6 +41,12 @@ void loop() {
   colorWipe(strip.Color(255, 0, 0), 150); // Red
   colorWipe(strip.Color(0, 255, 0), 150); // Green
   colorWipe(strip.Color(0, 0, 255), 150); // Blue
+  whiteWipe(200);
+  
+  colorWipe(strip.Color(255, 0, 0), 150); // Blue
+  colorWipe(strip.Color(80, 80, 80), 150); // Blue
+  colorWipe(strip.Color(120, 120, 120), 150); // Blue
+  colorWipe(strip.Color(255, 255, 255), 150); // Blue
 //colorWipe(strip.Color(0, 0, 0, 255), 50); // White RGBW
   // Send a theater pixel chase in...
 //  theaterChase(strip.Color(127, 127, 127), 50); // White
@@ -50,6 +56,14 @@ void loop() {
   rainbow(50);
   rainbowCycle(50);
 //  theaterChaseRainbow(50);
+}
+
+void whiteWipe(uint8_t wait) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, strip.Color(i*255/strip.numPixels(),i*255/strip.numPixels(),i*255/strip.numPixels()));
+    strip.show();
+    delay(wait);
+  }
 }
 
 // Fill the dots one after the other with a color

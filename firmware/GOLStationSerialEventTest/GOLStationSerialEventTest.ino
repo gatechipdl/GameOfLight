@@ -49,7 +49,7 @@ void loop() {
     Serial.println(inputString);
 
     byte inputByte = inputString.toInt(); //should be less than 256
-    colorWipe(CodedWheel(inputByte),20);
+    colorWipe(CodedWheel(inputByte),100);
     
     // clear the string:
     inputString = "";
@@ -150,8 +150,8 @@ uint32_t Wheel(byte WheelPos) {
  * 255 is full white
  */
 uint32_t CodedWheel(byte WheelPos) {
-  if(WheelPos = 0){return 0x000000;}
-  if(WheelPos = 255){return 0xFFFFFF;}
+  if(WheelPos == 0){return strip.Color(0,0,0);}
+  if(WheelPos == 255){return strip.Color(255,255,255);}
   return Wheel(WheelPos);
 }
 
