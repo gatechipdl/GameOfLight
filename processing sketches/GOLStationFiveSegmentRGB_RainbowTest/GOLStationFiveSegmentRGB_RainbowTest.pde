@@ -9,7 +9,7 @@ import processing.serial.*;
 
 Serial sPort;  // Create object from Serial class
 
-private static final int SERIAL_BAUD = 57600;
+private static final int SERIAL_BAUD = 115200;
 //3 bytes of color, 5 segments, 36 stations = 540
 private static final int STATION_COUNT = 36;
 private static final int STATION_LED_COUNT = 45;
@@ -44,20 +44,20 @@ void setup()
 }
 
 void draw() {
-  //delay(1000);
+  delay(50);
   background(255); //clear the background
   updateHuesAndBytes();
   
-  for(int i=0;i<6;i++){
-    for(int j=0;j<6;j++){
-      for(int k=0;k<5;k++){
-        int colorIndex = (i*6+j)*5+k;
-        fill(colors[colorIndex]);
+  //for(int i=0;i<6;i++){
+  //  for(int j=0;j<6;j++){
+  //    for(int k=0;k<5;k++){
+  //      int colorIndex = (i*6+j)*5+k;
+  //      fill(colors[colorIndex]);
         
-        rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*(5-k-1),canvasWidth/6,canvasHeight/30);
-      }
-    }
-  }
+  //      rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*(5-k-1),canvasWidth/6,canvasHeight/30);
+  //    }
+  //  }
+  //}
   
   sPort.write(packetBytes);
   //printArray(packetBytes);
@@ -76,7 +76,7 @@ void updateHuesAndBytes(){
   //AAAAAAAARRRRRRRRGGGGGGGGBBBBBBBB
   for(int s=0;s<STATION_COUNT;s++){
     for(int i=0;i<STATION_SEGMENT_COUNT;i++){
-      float hueIndex = (hueIndices[i] + s/float(STATION_COUNT));
+      float hueIndex = (hueIndices[0] + s/float(STATION_COUNT*5));
       hueIndex -= floor(hueIndex);
       //float hueIndex = (i/float(STATION_SEGMENT_COUNT));
       //float hueIndex = 0.7f;

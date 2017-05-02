@@ -25,8 +25,10 @@
 // 35_R4, 35_G4, 35_B4 UPPER MIDDLE SEGMENT
 // 35_R5, 35_G5, 35_B5 UPPER SEGMENT
 
+#include <ESP8266WiFi.h>
+
 #define STATION_ID 0
-#define SERIAL_BAUD 57600
+#define SERIAL_BAUD 115200
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -44,7 +46,7 @@
 #define COLOR_BYTE_COUNT 3
 #define STATION_BYTE_COUNT 540
 #define STATION_BYTE_COUNT_MINUS_ONE 539
-#define MAX_MILLIS_TO_WAIT_FOR_PACKET 1000
+#define MAX_MILLIS_TO_WAIT_FOR_PACKET 30
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -82,7 +84,7 @@ void setup() {
     if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
   #endif
   // End of trinket special code
-
+  
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   
@@ -90,7 +92,7 @@ void setup() {
   digitalWrite(PIN_RS485_RECEIVE,LOW); //listen mode
   
   lastSerialEventMillis = millis();
-
+  
   //index once
   stationLedColorIndex[0]=0; //TODO integrate black pixel as first pixel
   for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
@@ -101,6 +103,9 @@ void setup() {
   
   // initialize serial:
   Serial.begin(SERIAL_BAUD);
+
+  // turn off wifi
+  WiFi.mode(WIFI_OFF);
 }
 
 void loop() {
@@ -153,6 +158,7 @@ void prepareStationSegmentColors(){
  response.  Multiple bytes of data may be available.
  */
 void checkSerialEvent() {
+  bool hadData = false;
   while (Serial.available()) {
     
     // get the next new byte:
@@ -161,6 +167,10 @@ void checkSerialEvent() {
     if (packetBytesReceivedCount == STATION_BYTE_COUNT) {
       packetComplete = true; //flag the packet to be processed
     }
+    hadData = true;
+  }
+  if(hadData){
+    lastSerialEventMillis = millis();
   }
 
   //reset the packetBytes count if there hasn't been bytes in over 1 second
