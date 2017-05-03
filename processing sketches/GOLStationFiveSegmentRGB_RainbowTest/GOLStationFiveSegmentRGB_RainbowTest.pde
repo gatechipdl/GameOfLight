@@ -44,20 +44,20 @@ void setup()
 }
 
 void draw() {
-  delay(50);
+  delay(10);
   background(255); //clear the background
   updateHuesAndBytes();
   
-  //for(int i=0;i<6;i++){
-  //  for(int j=0;j<6;j++){
-  //    for(int k=0;k<5;k++){
-  //      int colorIndex = (i*6+j)*5+k;
-  //      fill(colors[colorIndex]);
+  for(int i=0;i<6;i++){
+    for(int j=0;j<6;j++){
+      for(int k=0;k<5;k++){
+        int colorIndex = (i*6+j)*5+k;
+        fill(colors[colorIndex]);
         
-  //      rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*(5-k-1),canvasWidth/6,canvasHeight/30);
-  //    }
-  //  }
-  //}
+        rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*(5-k-1),canvasWidth/6,canvasHeight/30);
+      }
+    }
+  }
   
   sPort.write(packetBytes);
   //printArray(packetBytes);
@@ -91,9 +91,9 @@ void updateHuesAndBytes(){
       packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = (byte)((c >>  0) & 255); //BLUE
       
       
-      //packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte(red(c)*255);
-      //packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(green(c)*255);
-      //packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(blue(c)*255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte(red(c)*255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(green(c)*255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(blue(c)*255);
     }
   }
 }

@@ -27,7 +27,8 @@
 
 #include <ESP8266WiFi.h>
 
-#define STATION_ID 0
+#define STATION_ID 24
+//possible to go up to 250000 with ~20ms refresh rate
 #define SERIAL_BAUD 115200
 
 #include "FastLED.h"
@@ -43,21 +44,18 @@ FASTLED_USING_NAMESPACE
 #define LED_TYPE    WS2811
 #define COLOR_ORDER GRB
 #define NUM_LEDS   45
-struct CRGB leds[NUM_LEDS];
-
-#define BRIGHTNESS          96
-#define FRAMES_PER_SECOND  120
+CRGB leds[NUM_LEDS];
+uint8_t max_brightness = 255; 
 
 #define PIN_RS485_RECEIVE 13
 
-#define STATION_LED_COUNT 46
+#define STATION_LED_COUNT 45
 #define STATION_SEGMENT_COUNT 5
 #define STATION_LED_SEGMENT_COUNT 9
 
 //3 bytes of color, 5 segments, 36 stations = 540
 #define COLOR_BYTE_COUNT 3
 #define STATION_BYTE_COUNT 540
-#define STATION_BYTE_COUNT_MINUS_ONE 539
 #define MAX_MILLIS_TO_WAIT_FOR_PACKET 30
 
 uint32_t lastSerialEventMillis;
@@ -74,27 +72,31 @@ uint8_t stationLedColorIndex[STATION_LED_COUNT];
 uint8_t currentLedIndex = 0;
 boolean doShowStrip = false;
  
+uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+CRGB rgbval(50,0,250);
 
 void setup() {
+  delay(2000); // 2 second delay for recovery
+  
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
   // set master brightness control
-  FastLED.setBrightness(BRIGHTNESS);
+  FastLED.setBrightness(max_brightness);
   
   pinMode(PIN_RS485_RECEIVE,OUTPUT);
   digitalWrite(PIN_RS485_RECEIVE,LOW); //listen mode
   
   lastSerialEventMillis = millis();
   
-  //index once
-  stationLedColorIndex[0]=0; //TODO integrate black pixel as first pixel
-  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
-    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
-      stationLedColorIndex[i*STATION_LED_SEGMENT_COUNT+j+1]=i;
-    }
-  }
+//  //index once
+//  stationLedColorIndex[0]=0; //TODO integrate black pixel as first pixel
+//  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
+//    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
+//      stationLedColorIndex[i*STATION_LED_SEGMENT_COUNT+j+1]=i;
+//    }
+//  }
   
   // initialize serial:
   Serial.begin(SERIAL_BAUD);
@@ -106,43 +108,29 @@ void setup() {
 void loop() {
   checkSerialEvent(); //check the serial event buffer
   
-  if(doShowStrip){
-    FastLED.show();
-    doShowStrip=false;
-  }
-
-  if(doPrepareStationSegmentColors){
-    prepareStationSegmentColors();
-  }
-
-  checkSerialEvent(); //check the serial event buffer again within the loop
-  
   if (packetComplete) {
     packetBytesReceivedCount = 0; //reset the packet bytes received count
-    lastSerialEventMillis = millis(); //reset timer
+    //lastSerialEventMillis = millis(); //reset timer
     memcpy(packetBytes, packetBytesSerialBuffer, STATION_BYTE_COUNT);
-
+    
     //rgb1,rgb2,rgb3,rgb4,rgb5
     for(uint8_t i=0; i<STATION_SEGMENT_COUNT;i++){
-      stationColors[i][0] = packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]; //RED
-      stationColors[i][0] = packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)]; //BLUE
-      stationColors[i][0] = packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)]; //GREEN
+      stationColors[i] = CRGB(
+        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)], //BLUE
+        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)], //GREEN
+        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]  //RED
+      );
     }
     
-    doPrepareStationSegmentColors = true;
+    fill_solid(leds+0,10,stationColors[0]);
+    fill_solid(leds+10,9,stationColors[1]);
+    fill_solid(leds+19,9,stationColors[2]);
+    fill_solid(leds+28,9,stationColors[3]);
+    fill_solid(leds+37,8,stationColors[4]);
+    FastLED.show();
+    
     packetComplete = false;
   }
-}
-
-//load one led color value per loop to distribute the blocking of the slow setPixelColor method
-void prepareStationSegmentColors(){
-  fill_solid(leds+0,10,stationColors[0]);
-  fill_solid(leds+10,19,stationColors[1]);
-  fill_solid(leds+19,28,stationColors[2]);
-  fill_solid(leds+28,37,stationColors[3]);
-  fill_solid(leds+37,45,stationColors[4]);
-  doPrepareStationSegmentColors=false; //done with loading led colors into the strip
-  doShowStrip=true; //ready to show the strip
 }
 
 /*
@@ -152,7 +140,7 @@ void prepareStationSegmentColors(){
  response.  Multiple bytes of data may be available.
  */
 void checkSerialEvent() {
-  bool hadData = false;
+  //bool hadData = false;
   while (Serial.available()) {
     
     // get the next new byte:
@@ -160,17 +148,18 @@ void checkSerialEvent() {
     packetBytesReceivedCount++;
     if (packetBytesReceivedCount == STATION_BYTE_COUNT) {
       packetComplete = true; //flag the packet to be processed
+      Serial.flush();
     }
-    hadData = true;
+    //hadData = true;
   }
-  if(hadData){
-    lastSerialEventMillis = millis();
-  }
-
-  //reset the packetBytes count if there hasn't been bytes in over 1 second
-  if( millis() - lastSerialEventMillis > MAX_MILLIS_TO_WAIT_FOR_PACKET){
-    packetBytesReceivedCount = 0; //reset the packet byte count
-    Serial.flush(); //clear out anything that might be in the serial buffer
-    lastSerialEventMillis = millis(); //reset timer
-  }
+//  if(hadData){
+//    lastSerialEventMillis = millis();
+//  }
+//
+//  //reset the packetBytes count if there hasn't been bytes in over 1 second
+//  if( millis() - lastSerialEventMillis > MAX_MILLIS_TO_WAIT_FOR_PACKET){
+//    packetBytesReceivedCount = 0; //reset the packet byte count
+//    Serial.flush(); //clear out anything that might be in the serial buffer
+//    lastSerialEventMillis = millis(); //reset timer
+//  }
 }
