@@ -43,7 +43,7 @@ FASTLED_USING_NAMESPACE
 #define LED_TYPE    WS2811
 #define COLOR_ORDER GRB
 #define NUM_LEDS   45
-CRGB leds[NUM_LEDS];
+struct CRGB leds[NUM_LEDS];
 
 #define BRIGHTNESS          96
 #define FRAMES_PER_SECOND  120
@@ -66,7 +66,7 @@ byte packetBytesSerialBuffer[STATION_BYTE_COUNT];
 byte packetBytes[STATION_BYTE_COUNT];
 uint16_t packetBytesReceivedCount = 0;
 
-uint32_t stationColors[STATION_SEGMENT_COUNT];
+CRGB stationColors[STATION_SEGMENT_COUNT];
 uint8_t stationId = STATION_ID;
 
 boolean doPrepareStationSegmentColors = false;
@@ -124,10 +124,9 @@ void loop() {
 
     //rgb1,rgb2,rgb3,rgb4,rgb5
     for(uint8_t i=0; i<STATION_SEGMENT_COUNT;i++){
-      stationColors[i] = 
-        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]<<16 | //RED
-        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)]<<8 |  //BLUE
-        packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)];      //GREEN
+      stationColors[i][0] = packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]; //RED
+      stationColors[i][0] = packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)]; //BLUE
+      stationColors[i][0] = packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)]; //GREEN
     }
     
     doPrepareStationSegmentColors = true;
@@ -137,13 +136,13 @@ void loop() {
 
 //load one led color value per loop to distribute the blocking of the slow setPixelColor method
 void prepareStationSegmentColors(){
-  strip.setPixelColor(currentLedIndex,stationColors[stationLedColorIndex[currentLedIndex]]);
-  currentLedIndex++;
-  if(currentLedIndex>STATION_LED_COUNT){
-    currentLedIndex=0;
-    doPrepareStationSegmentColors=false; //done with loading led colors into the strip
-    doShowStrip=true; //ready to show the strip
-  }
+  fill_solid(leds+0,10,stationColors[0]);
+  fill_solid(leds+10,19,stationColors[1]);
+  fill_solid(leds+19,28,stationColors[2]);
+  fill_solid(leds+28,37,stationColors[3]);
+  fill_solid(leds+37,45,stationColors[4]);
+  doPrepareStationSegmentColors=false; //done with loading led colors into the strip
+  doShowStrip=true; //ready to show the strip
 }
 
 /*
