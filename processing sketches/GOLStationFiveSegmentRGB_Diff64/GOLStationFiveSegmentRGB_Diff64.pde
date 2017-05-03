@@ -67,7 +67,7 @@ void setup()
 }
 
 void draw() {
-  delay(10);
+  delay(40);
   background(255); //clear the background
   updateHuesAndBytes();
   
@@ -84,7 +84,7 @@ void draw() {
   
   // "diff" encode the packetBytes
   for(int i=0;i<STATION_BYTE_COUNT;i++){
-    packetBytesDiff[i] = (byte)(packetBytes[i] + diff64[i%64]);
+    packetBytesDiff[i] = (byte)((byte)packetBytes[i] + (byte)diff64[i%64]);
   }
   sPort.write(packetBytesDiff);
   //printArray(packetBytes);
@@ -107,7 +107,7 @@ void updateHuesAndBytes(){
       hueIndex -= floor(hueIndex);
       //float hueIndex = (i/float(STATION_SEGMENT_COUNT));
       //float hueIndex = 0.7f;
-      color c = color( hueIndex,1f,0.02f);
+      color c = color( hueIndex,1f,1f);
       //c = color( 0f,1f,1f); //just a solid color
       //println(hueIndex+":"+int(red(c)*255)+","+int(green(c)*255)+","+int(blue(c)*255));
       int colorIndex = s*STATION_SEGMENT_COUNT+i;

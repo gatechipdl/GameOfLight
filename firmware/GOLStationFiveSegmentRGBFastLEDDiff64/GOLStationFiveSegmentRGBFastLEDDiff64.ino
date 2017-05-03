@@ -27,7 +27,7 @@
 
 #include <ESP8266WiFi.h>
 
-#define STATION_ID 24
+#define STATION_ID 0
 //possible to go up to 250000 with ~20ms refresh rate
 #define SERIAL_BAUD 115200
 
@@ -58,15 +58,16 @@ uint8_t max_brightness = 255;
 #define STATION_BYTE_COUNT 540
 #define MAX_MILLIS_TO_WAIT_FOR_PACKET 30
 
+
 byte diff64[] = {
-(byte)0x65, (byte)0x14, (byte)0xe7, (byte)0xdf, (byte)0x4c, (byte)0xe0, (byte)0x6b, (byte)0xb4,
-(byte)0x9f, (byte)0xe4, (byte)0x06, (byte)0x4d, (byte)0x2c, (byte)0x85, (byte)0x32, (byte)0xfe,
-(byte)0xc6, (byte)0x38, (byte)0x4f, (byte)0x19, (byte)0xa7, (byte)0x78, (byte)0x29, (byte)0x3f,
-(byte)0xf5, (byte)0x5b, (byte)0x6c, (byte)0x03, (byte)0x6a, (byte)0x8b, (byte)0x8b, (byte)0xf0, 
-(byte)0x96, (byte)0xa8, (byte)0x3d, (byte)0xad, (byte)0x3b, (byte)0x8f, (byte)0xbc, (byte)0xc0,
-(byte)0x58, (byte)0x51, (byte)0xf7, (byte)0x66, (byte)0x26, (byte)0xbb, (byte)0x5a, (byte)0xb5,
-(byte)0x16, (byte)0x20, (byte)0x14, (byte)0x10, (byte)0x69, (byte)0x72, (byte)0x75, (byte)0xc3,
-(byte)0x31, (byte)0xcc, (byte)0x3b, (byte)0x01, (byte)0xb7, (byte)0x2b, (byte)0xf4, (byte)0x71
+  0x65, 0x14, 0xe7, 0xdf, 0x4c, 0xe0, 0x6b, 0xb4,
+  0x9f, 0xe4, 0x06, 0x4d, 0x2c, 0x85, 0x32, 0xfe,
+  0xc6, 0x38, 0x4f, 0x19, 0xa7, 0x78, 0x29, 0x3f,
+  0xf5, 0x5b, 0x6c, 0x03, 0x6a, 0x8b, 0x8b, 0xf0, 
+  0x96, 0xa8, 0x3d, 0xad, 0x3b, 0x8f, 0xbc, 0xc0,
+  0x58, 0x51, 0xf7, 0x66, 0x26, 0xbb, 0x5a, 0xb5,
+  0x16, 0x20, 0x14, 0x10, 0x69, 0x72, 0x75, 0xc3,
+  0x31, 0xcc, 0x3b, 0x01, 0xb7, 0x2b, 0xf4, 0x71
 };
 
 uint32_t lastSerialEventMillis;
@@ -101,14 +102,6 @@ void setup() {
   
   lastSerialEventMillis = millis();
   
-//  //index once
-//  stationLedColorIndex[0]=0; //TODO integrate black pixel as first pixel
-//  for(uint8_t i=0;i<STATION_SEGMENT_COUNT;i++){
-//    for(uint8_t j=0;j<STATION_LED_SEGMENT_COUNT;j++){
-//      stationLedColorIndex[i*STATION_LED_SEGMENT_COUNT+j+1]=i;
-//    }
-//  }
-  
   // initialize serial:
   Serial.begin(SERIAL_BAUD);
 
@@ -121,15 +114,15 @@ void loop() {
   
   if (packetComplete) {
     packetBytesReceivedCount = 0; //reset the packet bytes received count
-    //lastSerialEventMillis = millis(); //reset timer
+    lastSerialEventMillis = millis();
     memcpy(packetBytes, packetBytesSerialBuffer, STATION_BYTE_COUNT);
     
     //rgb1,rgb2,rgb3,rgb4,rgb5
     for(uint8_t i=0; i<STATION_SEGMENT_COUNT;i++){
       stationColors[i] = CRGB(
-        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)], //BLUE
-        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)], //GREEN
-        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)]  //RED
+        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+0)], //RED
+        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+2)], //GREEN
+        (uint8_t)packetBytes[((stationId*STATION_SEGMENT_COUNT+i)*COLOR_BYTE_COUNT+1)]  //BLUE
       );
     }
     
@@ -151,26 +144,26 @@ void loop() {
  response.  Multiple bytes of data may be available.
  */
 void checkSerialEvent() {
-  //bool hadData = false;
+  bool hadData = false;
   while (Serial.available()) {
     
     // get the next new byte, and "de-diff"
-    packetBytesSerialBuffer[packetBytesReceivedCount] = (byte)(Serial.read()-diff64[packetBytesReceivedCount%64]);
+    packetBytesSerialBuffer[packetBytesReceivedCount] = Serial.read() - diff64[packetBytesReceivedCount%64];
     packetBytesReceivedCount++;
     if (packetBytesReceivedCount == STATION_BYTE_COUNT) {
       packetComplete = true; //flag the packet to be processed
       Serial.flush();
     }
-    //hadData = true;
+    hadData = true;
   }
-//  if(hadData){
-//    lastSerialEventMillis = millis();
-//  }
-//
-//  //reset the packetBytes count if there hasn't been bytes in over 1 second
-//  if( millis() - lastSerialEventMillis > MAX_MILLIS_TO_WAIT_FOR_PACKET){
-//    packetBytesReceivedCount = 0; //reset the packet byte count
-//    Serial.flush(); //clear out anything that might be in the serial buffer
-//    lastSerialEventMillis = millis(); //reset timer
-//  }
+  if(hadData){
+    lastSerialEventMillis = millis();
+  }
+
+  //reset the packetBytes count if there hasn't been bytes in over 1 second
+  if( millis() - lastSerialEventMillis > MAX_MILLIS_TO_WAIT_FOR_PACKET){
+    packetBytesReceivedCount = 0; //reset the packet byte count
+    Serial.flush(); //clear out anything that might be in the serial buffer
+    lastSerialEventMillis = millis(); //reset timer
+  }
 }
