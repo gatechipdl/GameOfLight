@@ -11,7 +11,7 @@ private static final int STATION_LED_SEGMENT_COUNT = 9;
 private static final int COLOR_BYTE_COUNT = 3;
 private static final int STATION_COLOR_COUNT = 180;
 private static final int STATION_BYTE_COUNT = 540;
-private static final int BASE_CYCLE_MILLIS = 10000;
+private static final int BASE_CYCLE_MILLIS = 5000;
 
 int canvasWidth = 600;
 int canvasHeight = 600;
@@ -67,20 +67,20 @@ void setup()
 }
 
 void draw() {
-  delay(40);
+  delay(2);
   background(255); //clear the background
   updateHuesAndBytes();
   
-  for(int i=0;i<6;i++){
-    for(int j=0;j<6;j++){
-      for(int k=0;k<5;k++){
-        int colorIndex = (i*6+j)*5+k;
-        fill(colors[colorIndex]);
+  //for(int i=0;i<6;i++){
+  //  for(int j=0;j<6;j++){
+  //    for(int k=0;k<5;k++){
+  //      int colorIndex = (i*6+j)*5+k;
+  //      fill(colors[colorIndex]);
         
-        rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*(5-k-1),canvasWidth/6,canvasHeight/30);
-      }
-    }
-  }
+  //      rect(canvasWidth/6*j,canvasHeight/6*i+canvasHeight/30*(5-k-1),canvasWidth/6,canvasHeight/30);
+  //    }
+  //  }
+  //}
   
   // "diff" encode the packetBytes
   for(int i=0;i<STATION_BYTE_COUNT;i++){
@@ -103,7 +103,7 @@ void updateHuesAndBytes(){
   //AAAAAAAARRRRRRRRGGGGGGGGBBBBBBBB
   for(int s=0;s<STATION_COUNT;s++){
     for(int i=0;i<STATION_SEGMENT_COUNT;i++){
-      float hueIndex = (hueIndices[0] + s/float(STATION_COUNT*5));
+      float hueIndex = (hueIndices[0] + s/float(STATION_COUNT*1));
       hueIndex -= floor(hueIndex);
       //float hueIndex = (i/float(STATION_SEGMENT_COUNT));
       //float hueIndex = 0.7f;
@@ -121,6 +121,10 @@ void updateHuesAndBytes(){
       packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte(red(c)*255);
       packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(green(c)*255);
       packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(blue(c)*255);
+      
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte(255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(255);
+      packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(255);
     }
   }
 }

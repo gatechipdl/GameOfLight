@@ -27,7 +27,7 @@
 
 #include <ESP8266WiFi.h>
 
-#define STATION_ID 0
+#define STATION_ID 6
 //possible to go up to 250000 with ~20ms refresh rate
 #define SERIAL_BAUD 115200
 
