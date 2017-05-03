@@ -80,7 +80,7 @@ void updateHuesAndBytes(){
       hueIndex -= floor(hueIndex);
       //float hueIndex = (i/float(STATION_SEGMENT_COUNT));
       //float hueIndex = 0.7f;
-      color c = color( hueIndex,1f,1f);
+      color c = color( hueIndex,1f,0.02f);
       //c = color( 0f,1f,1f); //just a solid color
       //println(hueIndex+":"+int(red(c)*255)+","+int(green(c)*255)+","+int(blue(c)*255));
       int colorIndex = s*STATION_SEGMENT_COUNT+i;
