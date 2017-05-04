@@ -17,20 +17,35 @@ int[][][][] STATION_SEGMENT_COLOR = new int[GRID_X][GRID_Y][STATION_SEGMENT_COUN
 int[][][] STATION_SEGMENT_STATE = new int[GRID_X][GRID_Y][STATION_SEGMENT_COUNT];
 
 //serial communication
-int STATION_PORT_INDEX = 0;
+int SEND_DELAY = 10;
+int MIN_VAL = 0;
+long TIME_CHECK = 0;
+int STATION_PORT_INDEX = 2;
 int PARTICLE_PORT_INDEX = 1;
 Serial STATION_PORT;
 Serial PARTICLE_PORT;
-int SERIAL_BAUD = 57600;
+int SERIAL_BAUD = 115200;
 int STATION_COUNT = 36;
 int[] STATION_SEGMENT_CHANGE = new int[STATION_COUNT];
-int UPDATE_ANIMATION = 5;
+int UPDATE_ANIMATION = 2;
 int STATION_LED_COUNT = 45;
 int STATION_LED_SEGMENT_COUNT = 9;
 int COLOR_BYTE_COUNT = 3;
 int STATION_COLOR_COUNT = 180;
 int STATION_BYTE_COUNT = 540; //3 bytes of color, 5 segments, 36 stations = 540
 byte[] packetBytes = new byte[STATION_BYTE_COUNT];
+byte[] packetBytesDiff = new byte[STATION_BYTE_COUNT];
+
+byte[] diff64 = {
+  (byte)0x65, (byte)0x14, (byte)0xe7, (byte)0xdf, (byte)0x4c, (byte)0xe0, (byte)0x6b, (byte)0xb4, 
+  (byte)0x9f, (byte)0xe4, (byte)0x06, (byte)0x4d, (byte)0x2c, (byte)0x85, (byte)0x32, (byte)0xfe, 
+  (byte)0xc6, (byte)0x38, (byte)0x4f, (byte)0x19, (byte)0xa7, (byte)0x78, (byte)0x29, (byte)0x3f, 
+  (byte)0xf5, (byte)0x5b, (byte)0x6c, (byte)0x03, (byte)0x6a, (byte)0x8b, (byte)0x8b, (byte)0xf0, 
+  (byte)0x96, (byte)0xa8, (byte)0x3d, (byte)0xad, (byte)0x3b, (byte)0x8f, (byte)0xbc, (byte)0xc0, 
+  (byte)0x58, (byte)0x51, (byte)0xf7, (byte)0x66, (byte)0x26, (byte)0xbb, (byte)0x5a, (byte)0xb5, 
+  (byte)0x16, (byte)0x20, (byte)0x14, (byte)0x10, (byte)0x69, (byte)0x72, (byte)0x75, (byte)0xc3, 
+  (byte)0x31, (byte)0xcc, (byte)0x3b, (byte)0x01, (byte)0xb7, (byte)0x2b, (byte)0xf4, (byte)0x71
+};
 
 //GUI
 int gui_X = 50;
@@ -68,6 +83,7 @@ void setGridState(int x, int y, int z, int s) {
   STATION_SEGMENT_STATE[x][y][z] = s;
   int stationIndex = y*GRID_X+x;
   STATION_STATES_TABLE.setInt(STATION_ORDER[stationIndex], z, s);
+  STATION_SEGMENT_CHANGE[STATION_ORDER[stationIndex]] = STATION_SEGMENT_COUNT*UPDATE_ANIMATION;
   writeTable();
 }
 
@@ -118,10 +134,10 @@ void setStationColor(int i, int j, int r, int g, int b) {
 
 void writeTable() {
   try {
-    saveTable(STATION_STATES_TABLE, "data/station_states.csv");
+   saveTable(STATION_STATES_TABLE, "data/station_states.csv");
   } 
   catch (Exception e) {
-    e.printStackTrace();
+   e.printStackTrace();
   }
 }
 
@@ -130,7 +146,7 @@ void updatePackets() {
     int rowIndex = (i%GRID_X);
     int colIndex = (i/GRID_X);
     int s = STATION_ORDER[i];
-    if (STATION_SEGMENT_CHANGE[s] > 0) {
+    if (STATION_SEGMENT_CHANGE[s] >= 0) {
       for (int j=0; j<STATION_SEGMENT_COUNT; j++) {
         int colorIndex = s*STATION_SEGMENT_COUNT+j;
         if (j < STATION_SEGMENT_CHANGE[s]/UPDATE_ANIMATION) {
@@ -141,12 +157,12 @@ void updatePackets() {
           STATION_SEGMENT_COLOR[rowIndex][colIndex][j][1] = 255;
           STATION_SEGMENT_COLOR[rowIndex][colIndex][j][2] = 255;
         } else {
-          packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = (byte)(0); //RED
-          packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = (byte)(0); //GREEN
-          packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = (byte)(0); //BLUE
-          STATION_SEGMENT_COLOR[rowIndex][colIndex][j][0] = 0;
-          STATION_SEGMENT_COLOR[rowIndex][colIndex][j][1] = 0;
-          STATION_SEGMENT_COLOR[rowIndex][colIndex][j][2] = 0;
+          packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = (byte)(MIN_VAL); //RED
+          packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = (byte)(MIN_VAL); //GREEN
+          packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = (byte)(MIN_VAL); //BLUE
+          STATION_SEGMENT_COLOR[rowIndex][colIndex][j][0] = MIN_VAL;
+          STATION_SEGMENT_COLOR[rowIndex][colIndex][j][1] = MIN_VAL;
+          STATION_SEGMENT_COLOR[rowIndex][colIndex][j][2] = MIN_VAL;
         }
       }
       STATION_SEGMENT_CHANGE[s] = STATION_SEGMENT_CHANGE[s] - 1;
@@ -156,6 +172,13 @@ void updatePackets() {
         packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = (byte)(STATION_SEGMENT_COLOR[rowIndex][colIndex][j][0]); //RED
         packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = (byte)(STATION_SEGMENT_COLOR[rowIndex][colIndex][j][1]); //GREEN
         packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = (byte)(STATION_SEGMENT_COLOR[rowIndex][colIndex][j][2]); //BLUE
+
+        //float timeFactor = sin(float(millis())*TWO_PI/10000);
+        //int mil = abs(int(timeFactor*255));
+
+        //packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = (byte)(mil);
+        //packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = (byte)(mil);
+        //packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = (byte)(mil);
       }
     }
   }
@@ -191,7 +214,16 @@ void readParticleSerial() {
 }
 
 void sendPackets() {
-  STATION_PORT.write(packetBytes);
+  for(int i=0;i<STATION_BYTE_COUNT;i++){
+    packetBytesDiff[i] = (byte)((byte)packetBytes[i] + (byte)diff64[i%64]);
+  }
+  STATION_PORT.write(packetBytesDiff);
+  //println("packet sent", millis());
+}
+
+void clearPort() {
+  STATION_PORT.clear();
+  //println("packet sent", millis());
 }
 
 void drawGrid(int x, int y, int w, int h, int gap) {
@@ -246,10 +278,16 @@ void setup() {
 void draw() {
   background(0);
   readParticleSerial();
-  drawSim();
-  updatePackets();
   drawGrid(gui_X, gui_Y, gui_W, gui_H, gui_gap);
-  sendPackets();
+
+  if (millis()-TIME_CHECK > SEND_DELAY) {
+    drawSim();
+    TIME_CHECK = millis();
+    updatePackets();
+    sendPackets();
+  } else {
+    clearPort();
+  }
 
   fill(255);
   text("[ R ] randomize", width-200, gui_Y);
@@ -303,9 +341,13 @@ void mousePressed() {
 }
 
 
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////// GAME ////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 
 PVector grid = new PVector(GRID_X, GRID_Y, STATION_SEGMENT_COUNT);
@@ -465,9 +507,9 @@ void drawSim() {
         int red = int(returnChannel(oldState[i][j][k][0], state[i][j][k][0], counter%smallTransition, smallTransition)*255);
         int blue = int(returnChannel(oldState[i][j][k][1], state[i][j][k][1], counter%mediumTransition, mediumTransition)*255);
         int green = int(returnChannel(oldState[i][j][k][2], state[i][j][k][2], counter%largeTransition, largeTransition)*255);
-        red = constrain(red, 0, 255);
-        blue = constrain(blue, 0, 255);
-        green = constrain(green, 0, 255);
+        red = constrain(red, MIN_VAL, 255);
+        blue = constrain(blue, MIN_VAL, 255);
+        green = constrain(green, MIN_VAL, 255);
         setGridColor(i, j, k, red, green, blue);
       }
     }
