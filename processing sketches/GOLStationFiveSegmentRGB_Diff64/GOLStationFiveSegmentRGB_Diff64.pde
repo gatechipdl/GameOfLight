@@ -11,7 +11,7 @@ private static final int STATION_LED_SEGMENT_COUNT = 9;
 private static final int COLOR_BYTE_COUNT = 3;
 private static final int STATION_COLOR_COUNT = 180;
 private static final int STATION_BYTE_COUNT = 540;
-private static final int BASE_CYCLE_MILLIS = 5000;
+private static final int BASE_CYCLE_MILLIS = 10000;
 
 int canvasWidth = 600;
 int canvasHeight = 600;
@@ -39,27 +39,27 @@ void setup()
   canvasWidth = width;
   canvasHeight = height;
   
-  byte[] test = {0,0,0,0};
-  println(test);
-  byte[] test2 = new byte[test.length];
-  //System.arraycopy(test,0,test2,0,test.length);
-  for(int i=0;i<test.length;i++){
-    test2[i] = (byte)(test[i] + diff64[i%64] + diff64[i%64] + diff64[i%64]);
-  }
-  println(test2);
+  //byte[] test = {0,0,0,0};
+  //println(test);
+  //byte[] test2 = new byte[test.length];r
+  ////System.arraycopy(test,0,test2,0,test.length);
+  //for(int i=0;i<test.length;i++){
+  //  test2[i] = (byte)(test[i] + diff64[i%64] + diff64[i%64] + diff64[i%64]);
+  //}
+  //println(test2);
   
-  byte[] test3 = new byte[test.length];
-  for(int i=0;i<test.length;i++){
-    test3[i] = (byte)(test2[i] - diff64[i%64] - diff64[i%64] - diff64[i%64]);
-  }
-  println(test3);
+  //byte[] test3 = new byte[test.length];
+  //for(int i=0;i<test.length;i++){
+  //  test3[i] = (byte)(test2[i] - diff64[i%64] - diff64[i%64] - diff64[i%64]);
+  //}
+  //println(test3);
   
   
   
   // List all the available serial ports:
   printArray(Serial.list());
   
-  String portName = Serial.list()[0];
+  String portName = Serial.list()[2];
   sPort = new Serial(this, portName, SERIAL_BAUD);
   
   colorMode(HSB,1f);
@@ -103,7 +103,7 @@ void updateHuesAndBytes(){
   //AAAAAAAARRRRRRRRGGGGGGGGBBBBBBBB
   for(int s=0;s<STATION_COUNT;s++){
     for(int i=0;i<STATION_SEGMENT_COUNT;i++){
-      float hueIndex = (hueIndices[0] + s/float(STATION_COUNT*1));
+      float hueIndex = (hueIndices[0] + s/float(STATION_COUNT));
       hueIndex -= floor(hueIndex);
       //float hueIndex = (i/float(STATION_SEGMENT_COUNT));
       //float hueIndex = 0.7f;
@@ -122,9 +122,7 @@ void updateHuesAndBytes(){
       packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(green(c)*255);
       packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(blue(c)*255);
       
-      packetBytes[colorIndex*COLOR_BYTE_COUNT+0] = byte(255);
-      packetBytes[colorIndex*COLOR_BYTE_COUNT+1] = byte(255);
-      packetBytes[colorIndex*COLOR_BYTE_COUNT+2] = byte(255);
+
     }
   }
 }

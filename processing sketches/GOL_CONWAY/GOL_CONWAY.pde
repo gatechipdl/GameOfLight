@@ -5,12 +5,12 @@ int GRID_X = 6;
 int GRID_Y = 6;
 int STATION_SEGMENT_COUNT = 5;
 int[] STATION_ORDER = {
-  0, 1, 2, 3, 4, 5, 
-  6, 7, 8, 9, 10, 11, 
-  12, 13, 14, 15, 16, 17, 
-  18, 19, 20, 21, 22, 23, 
-  24, 25, 26, 27, 28, 29, 
-  30, 31, 32, 33, 34, 35, 
+  35, 34, 33, 32, 31, 30, 
+  29, 28, 27, 26, 25, 24, 
+  23, 22, 21, 20, 19, 18, 
+  17, 16, 15, 14, 13, 12, 
+  11, 10, 9, 8, 7, 6, 
+  5, 4, 3, 2, 1, 0 
 };
 Table STATION_STATES_TABLE;
 int[][][][] STATION_SEGMENT_COLOR = new int[GRID_X][GRID_Y][STATION_SEGMENT_COUNT][3];
@@ -134,10 +134,10 @@ void setStationColor(int i, int j, int r, int g, int b) {
 
 void writeTable() {
   try {
-   saveTable(STATION_STATES_TABLE, "data/station_states.csv");
+    saveTable(STATION_STATES_TABLE, "data/station_states.csv");
   } 
   catch (Exception e) {
-   e.printStackTrace();
+    e.printStackTrace();
   }
 }
 
@@ -208,13 +208,27 @@ void readParticleSerial() {
           }
         }
         break;
+      case 2:
+        int modeState = parseInt(switchVar[1]);
+        switch (modeState) {
+        case 0:
+          animate = !animate;
+          break;
+        case 1:
+          refreshStates();
+          break;
+        case 2:
+          rainbow = !rainbow;
+          break;
+        }
+        break;
       }
     }
   }
 }
 
 void sendPackets() {
-  for(int i=0;i<STATION_BYTE_COUNT;i++){
+  for (int i=0; i<STATION_BYTE_COUNT; i++) {
     packetBytesDiff[i] = (byte)((byte)packetBytes[i] + (byte)diff64[i%64]);
   }
   STATION_PORT.write(packetBytesDiff);
@@ -281,7 +295,13 @@ void draw() {
   drawGrid(gui_X, gui_Y, gui_W, gui_H, gui_gap);
 
   if (millis()-TIME_CHECK > SEND_DELAY) {
-    drawSim();
+    if (rainbow) {
+      updateHuesAndBytes();
+    } else {
+      if (animate) {
+        drawSim();
+      }
+    }
     TIME_CHECK = millis();
     updatePackets();
     sendPackets();
@@ -290,7 +310,7 @@ void draw() {
   }
 
   fill(255);
-  text("[ R ] randomize", width-200, gui_Y);
+  text("[ R ] toggle rainbow", width-200, gui_Y);
   text("[ C ] clear all", width-200, gui_Y+20);
   if (animate) {
     fill(0, 255, 0);
@@ -305,9 +325,10 @@ void draw() {
 void keyPressed() {
   switch(keyCode) {
   case 82: //r
-    randomize();
-    refreshStates();
-    writeTable();
+    //randomize();
+    //refreshStates();
+    //writeTable();
+    rainbow = !rainbow;
     break;
   case 67: //c
     clearState();
@@ -355,9 +376,9 @@ Resource[][][] resource = new Resource[int(grid.x)][int(grid.y)][int(grid.z)];
 int[][][][] state = new int[int(grid.x)][int(grid.y)][int(grid.z)][3];
 int[][][][] oldState = new int[int(grid.x)][int(grid.y)][int(grid.z)][3];
 
-int smallTransition = 10;
-int mediumTransition = 10;
-int largeTransition = 10;
+int smallTransition = 15;
+int mediumTransition = 15;
+int largeTransition = 15;
 int counterBW = 0;
 int counter = 0;
 Rule[] ruleTable = { //args: index, state to change if dead, state to change if alive
@@ -393,6 +414,8 @@ Rule[] ruleTable = { //args: index, state to change if dead, state to change if 
 int timeStamp = 0;
 int oldTimeStamp = 0;
 
+boolean rainbow = false;
+
 void initObjects() {
   for (int i=0; i<grid.x; i++) {
     for (int j=0; j<grid.y; j++) {
@@ -412,26 +435,31 @@ void refreshStates() {
           state[i][j][k][0] = 0;
           state[i][j][k][1] = 0;
           state[i][j][k][2] = 0;
+          setGridColor(i, j, k, 0, 0, 0);
           break;
         case 1:
           state[i][j][k][0] = 1;
           state[i][j][k][1] = 0;
           state[i][j][k][2] = 0;
+          setGridColor(i, j, k, 255, 0, 0);
           break;
         case 2:
           state[i][j][k][0] = 0;
           state[i][j][k][1] = 1;
           state[i][j][k][2] = 0;
+          setGridColor(i, j, k, 0, 0, 255);
           break;
         case 3:
           state[i][j][k][0] = 0;
           state[i][j][k][1] = 0;
           state[i][j][k][2] = 1;
+          setGridColor(i, j, k, 0, 255, 0);
           break;
         }
       }
     }
   }
+  counter = 0;
 }
 
 void updateOldState(int m) {
@@ -537,5 +565,28 @@ class Rule {
     i = I;
     a = A;
     b = B;
+  }
+}
+
+float[] hueIndices = new float[STATION_SEGMENT_COUNT];
+private static final int BASE_CYCLE_MILLIS = 7000;
+void updateHuesAndBytes() {
+  int m = millis();
+  for (int i=0; i<STATION_SEGMENT_COUNT; i++) {
+    hueIndices[i] = 1f*(m%(BASE_CYCLE_MILLIS*(i+1)))/float(BASE_CYCLE_MILLIS*(i+1));
+  }
+
+  //AAAAAAAARRRRRRRRGGGGGGGGBBBBBBBB
+  for (int s=0; s<STATION_COUNT; s++) {
+    for (int i=0; i<STATION_SEGMENT_COUNT; i++) {
+      float hueIndex = (hueIndices[0] + s/float(STATION_COUNT));
+      hueIndex -= floor(hueIndex);
+      colorMode(HSB, 1f);
+      color c = color(hueIndex, 1f, 1f);
+      colorMode(RGB, 255);
+      if (s<STATION_ORDER.length) {
+        setStationColor(STATION_ORDER[s], i, int(red(c)), int(green(c)), int(blue(c)));
+      }
+    }
   }
 }
