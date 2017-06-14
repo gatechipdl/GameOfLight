@@ -122,6 +122,7 @@ void setup() {
     delay(100);
   }
   webSocket.emit("subscribe", "14");//number2char(stationId));
+  webSocket.emit("subscribe", "stations");
   webSocket.on("colors", colorEventHandler);
   //webSocket.begin(SERVER_IP);
   webSocket.begin("192.168.0.100", 80);
