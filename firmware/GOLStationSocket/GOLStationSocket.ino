@@ -54,8 +54,34 @@ CRGB rgbval(50, 0, 250);
 ESP8266WiFiMulti WiFiMulti;
 SocketIoClient webSocket;
 
-void colorEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got message: %s\n", payload);
+
+
+void clearSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got clear message\n");
+
+  fill_solid(leds,STATION_LED_COUNT, CRGB(0,0,0));
+  
+  doRedraw = true;
+}
+
+//TODO fillSolidSocketEventHandler
+//TODO setColorSocketEventHandler;
+//TODO setColorsSocketEventHandler;
+
+void setFivesSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got setFives message: %s\n", payload);
+  
+  for (int i = 0; i < STATION_LED_COUNT; i++) {
+    leds[i].r = (uint8_t)payload[i/STATION_LED_SEGMENT_COUNT+0];
+    leds[i].g = (uint8_t)payload[i/STATION_LED_SEGMENT_COUNT+2];
+    leds[i].b = (uint8_t)payload[i/STATION_LED_SEGMENT_COUNT+1];
+  }
+  
+  doRedraw = true;
+}
+
+void setFivesOldSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got setFivesOld message: %s\n", payload);
 
   String dataString = "";
   int loc = 0; //keep track of color byte number
@@ -77,18 +103,9 @@ void colorEventHandler(const char * payload, size_t payloadLength) {
       dataString.concat(payload[num]);
     }
   }
-
-  //  for (int num = 0; num < payloadLength; num++) {
-  //    dataString.concat(payload[num]);
-  //  }
-  //  String[] readings = dataString.split(dataString,',');
-  //  for(int i=0;i<readings.length()||i>STATION_BYTE_COUNT;i++){
-  //    packetBytesSerialBuffer[i] = (byte)(readings[i].toInt());
-  //  }
+  
   doRedraw = true;
 }
-
-
 
 void setup() {
 
@@ -121,9 +138,15 @@ void setup() {
   while (WiFiMulti.run() != WL_CONNECTED) {
     delay(100);
   }
-  webSocket.emit("subscribe", "14");//number2char(stationId));
+  webSocket.emit("subscribe", "12");//number2char(stationId));
   webSocket.emit("subscribe", "stations");
-  webSocket.on("colors", colorEventHandler);
+  webSocket.on("clear", clearSocketEventHandler);
+  //webSocket.on("fillSolid", fillSolidSocketEventHandler);
+  //webSocket.on("setColor", setColorSocketEventHandler);
+  //webSocket.on("setColors", setColorsSocketEventHandler);
+  webSocket.on("setFives", setFivesSocketEventHandler);
+  webSocket.on("setFivesOld", setFivesOldSocketEventHandler);
+  
   //webSocket.begin(SERVER_IP);
   webSocket.begin("192.168.0.100", 80);
   USE_SERIAL.printf("got to the bottom here\n");
@@ -149,20 +172,20 @@ void loop() {
 }
 
 void redraw() {
-  memcpy(packetBytes, packetBytesSerialBuffer, STATION_BYTE_COUNT);
-  for (uint8_t i = 0; i < STATION_SEGMENT_COUNT; i++) {
-    stationColors[i] = CRGB(
-       (uint8_t)packetBytes[((COLOR_BYTE_COUNT * i) + 0)], //RED
-       (uint8_t)packetBytes[((COLOR_BYTE_COUNT * i) + 2)], //GREEN
-       (uint8_t)packetBytes[((COLOR_BYTE_COUNT * i) + 1)] //BLUE
-     );
-  }
-
-  fill_solid(leds + 0, 10, stationColors[0]);
-  fill_solid(leds + 10, 9, stationColors[1]);
-  fill_solid(leds + 19, 9, stationColors[2]);
-  fill_solid(leds + 28, 9, stationColors[3]);
-  fill_solid(leds + 37, 8, stationColors[4]);
+//  memcpy(packetBytes, packetBytesSerialBuffer, STATION_BYTE_COUNT);
+//  for (uint8_t i = 0; i < STATION_SEGMENT_COUNT; i++) {
+//    stationColors[i] = CRGB(
+//       (uint8_t)packetBytes[((COLOR_BYTE_COUNT * i) + 0)], //RED
+//       (uint8_t)packetBytes[((COLOR_BYTE_COUNT * i) + 2)], //GREEN
+//       (uint8_t)packetBytes[((COLOR_BYTE_COUNT * i) + 1)] //BLUE
+//     );
+//  }
+//
+//  fill_solid(leds + 0, 10, stationColors[0]);
+//  fill_solid(leds + 10, 9, stationColors[1]);
+//  fill_solid(leds + 19, 9, stationColors[2]);
+//  fill_solid(leds + 28, 9, stationColors[3]);
+//  fill_solid(leds + 37, 8, stationColors[4]);
   FastLED.show();
 
   doRedraw = false;
