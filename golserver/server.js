@@ -121,11 +121,11 @@ function SetFiveColors(stationId,fiveColorArray){
     } 
     
     var dataBuffer = new Uint8Array([
-        ledColor[0].r,ledColor[0].g,fiveColorArray[0].b,
-        ledColor[1].r,ledColor[1].g,fiveColorArray[1].b,
-        ledColor[2].r,ledColor[2].g,fiveColorArray[2].b,
-        ledColor[3].r,ledColor[3].g,fiveColorArray[3].b,
-        ledColor[4].r,ledColor[4].g,fiveColorArray[4].b
+        fiveColorArray[0].r,fiveColorArray[0].g,fiveColorArray[0].b,
+        fiveColorArray[1].r,fiveColorArray[1].g,fiveColorArray[1].b,
+        fiveColorArray[2].r,fiveColorArray[2].g,fiveColorArray[2].b,
+        fiveColorArray[3].r,fiveColorArray[3].g,fiveColorArray[3].b,
+        fiveColorArray[4].r,fiveColorArray[4].g,fiveColorArray[4].b
     ]);
     
     io.sockets.to(stationId).emit('setFives',dataBuffer);
@@ -186,30 +186,18 @@ function HSVtoRGB(h, s, v) {
 var hue = 120;
 var colorString = '';
 
+var fiveColors = new Array(5).fill(new CRGB(0,0,0));
+
 var doStuff = function(){
-    hue = (hue+1)%360;
-    colors = HSVtoRGB(hue,100,100);
-    console.log(colors);
-    colorString = '';
-    colorString+=colors[0][0].r+',';
-    colorString+=colors[0][0].g+',';
-    colorString+=colors[0][0].b+',';
-    colorString+=colors[0][1].r+',';
-    colorString+=colors[0][1].g+',';
-    colorString+=colors[0][1].b+',';
-    colorString+=colors[0][2].r+',';
-    colorString+=colors[0][2].g+',';
-    colorString+=colors[0][2].b+',';
-    colorString+=colors[0][3].r+',';
-    colorString+=colors[0][3].g+',';
-    colorString+=colors[0][3].b+',';
-    colorString+=colors[0][4].r+',';
-    colorString+=colors[0][4].g+',';
-    colorString+=colors[0][4].b+',';
+    hue = (hue+5)%360;
+    fiveColors[0] = HSVtoRGB(hue/360.0,1.0,1.0);
+    fiveColors[1] = HSVtoRGB(hue/360.0,1.0,1.0);
+    fiveColors[2] = HSVtoRGB(hue/360.0,1.0,1.0);
+    fiveColors[3] = HSVtoRGB(hue/360.0,1.0,1.0);
+    fiveColors[4] = HSVtoRGB(hue/360.0,1.0,1.0);
+    console.log(fiveColors[0]);
     
-    
-    io.sockets.emit('setFivesOld',colorString);
+    SetFiveColors(14,fiveColors);
     
 };
-
-//setInterval(doStuff,50);
+setInterval(doStuff,500);
