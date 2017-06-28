@@ -5,6 +5,7 @@ const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const color = require("rgb");
+const base64js = require('base64-js');
 
 // host everything in the public folder
 app.use(express.static(__dirname + '/public')); 
@@ -13,10 +14,10 @@ var port = 80;
 server.listen(port);
 
 io.on('connection',function(socket){
-    console.log("client "+socket+" connected");
+    console.log("client "+socket['id']+" connected");
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
-        console.log("client "+socket+" joined room "+roomName);
+        console.log("client "+socket['id']+" joined room "+roomName);
     });
 });
 
@@ -120,7 +121,29 @@ function SetFiveColors(stationId,fiveColorArray){
         }
     } 
     
-    var dataBuffer = new Uint8Array([
+//    var dataArrayBuffer = new ArrayBuffer(15);
+//    var dataBuffer = new Uint8Array(dataArrayBuffer);
+//    dataArrayBuffer[0]=fiveColorArray[0].r;
+//    dataArrayBuffer[1]=fiveColorArray[0].g;
+//    dataArrayBuffer[2]=fiveColorArray[0].b;
+//    
+//    dataArrayBuffer[3]=fiveColorArray[1].r;
+//    dataArrayBuffer[4]=fiveColorArray[1].g;
+//    dataArrayBuffer[5]=fiveColorArray[1].b;
+//    
+//    dataArrayBuffer[6]=fiveColorArray[2].r;
+//    dataArrayBuffer[7]=fiveColorArray[2].g;
+//    dataArrayBuffer[8]=fiveColorArray[2].b;
+//    
+//    dataArrayBuffer[9]=fiveColorArray[3].r;
+//    dataArrayBuffer[10]=fiveColorArray[3].g;
+//    dataArrayBuffer[11]=fiveColorArray[3].b;
+//    
+//    dataArrayBuffer[12]=fiveColorArray[4].r;
+//    dataArrayBuffer[13]=fiveColorArray[4].g;
+//    dataArrayBuffer[14]=fiveColorArray[4].b;
+    
+    var dataBuffer2 = new Uint8Array([
         fiveColorArray[0].r,fiveColorArray[0].g,fiveColorArray[0].b,
         fiveColorArray[1].r,fiveColorArray[1].g,fiveColorArray[1].b,
         fiveColorArray[2].r,fiveColorArray[2].g,fiveColorArray[2].b,
@@ -128,7 +151,8 @@ function SetFiveColors(stationId,fiveColorArray){
         fiveColorArray[4].r,fiveColorArray[4].g,fiveColorArray[4].b
     ]);
     
-    io.sockets.to(stationId).emit('setFives',dataBuffer);
+    io.sockets.to(stationId).emit('setFives',base64js.fromByteArray(dataBuffer2));
+    //console.log(base64js.fromByteArray(dataBuffer2));
 }
 
 /*
@@ -184,20 +208,32 @@ function HSVtoRGB(h, s, v) {
 
 
 var hue = 120;
+var hueBase = 1000;
 var colorString = '';
 
 var fiveColors = new Array(5).fill(new CRGB(0,0,0));
 
 var doStuff = function(){
-    hue = (hue+5)%360;
-    fiveColors[0] = HSVtoRGB(hue/360.0,1.0,1.0);
-    fiveColors[1] = HSVtoRGB(hue/360.0,1.0,1.0);
-    fiveColors[2] = HSVtoRGB(hue/360.0,1.0,1.0);
-    fiveColors[3] = HSVtoRGB(hue/360.0,1.0,1.0);
-    fiveColors[4] = HSVtoRGB(hue/360.0,1.0,1.0);
-    console.log(fiveColors[0]);
+    hue = (hue+6)%hueBase;
+    var t_hue = hue;
+    for(var i=0;i<STATION_COUNT;i++){
+        t_hue = (hue+1)%hueBase;
+        fiveColors[0] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+2)%hueBase;
+        fiveColors[1] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+3)%hueBase;
+        fiveColors[2] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+4)%hueBase;
+        fiveColors[3] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+5)%hueBase;
+        fiveColors[4] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        
+        SetFiveColors(i,fiveColors);
+    }
     
-    SetFiveColors(14,fiveColors);
+    //console.log(fiveColors[0]);
+    
+    
     
 };
-setInterval(doStuff,500);
+setInterval(doStuff,50);
