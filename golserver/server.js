@@ -208,7 +208,7 @@ function HSVtoRGB(h, s, v) {
 
 
 var hue = 120;
-var hueBase = 1000;
+var hueBase = 360;
 var colorString = '';
 
 var fiveColors = new Array(5).fill(new CRGB(0,0,0));
@@ -236,4 +236,4 @@ var doStuff = function(){
     
     
 };
-setInterval(doStuff,50);
+setInterval(doStuff,100);
