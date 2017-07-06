@@ -1,3 +1,5 @@
+//use Flash size 4MB (1M SPIFFS)
+
 #include <Arduino.h>
 
 #include <ESP8266WiFi.h>
@@ -205,7 +207,7 @@ void setup() {
   WiFiMulti.addAP(wifi_ssid,wifi_pass);
 
   while (WiFiMulti.run() != WL_CONNECTED) {
-    t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100/bin/base.bin");
+    t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100",80,"/update/base","1000");
     //t_httpUpdate_return  ret = ESPhttpUpdate.update("https://server/file.bin");
 
     switch(ret) {
@@ -221,7 +223,7 @@ void setup() {
             USE_SERIAL.println("HTTP_UPDATE_OK");
             break;
     }
-    delay(100);
+    delay(1000);
   }
   
   webSocket.on("connect", connectSocketEventHandler);
