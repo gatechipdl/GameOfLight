@@ -6,9 +6,46 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const color = require("rgb");
 const base64js = require('base64-js');
+const path = require('path');
+const fs = require('fs');
+const md5 = require('md5-file');
+
+var baseVersion = 1000;
 
 // host everything in the public folder
 app.use(express.static(__dirname + '/public')); 
+
+//check github.com/esp8266/Arduino/issues/2228 for example
+app.get('/update/base',function(req,res){
+    //check version somehow
+    //console.dir(req.headers);
+    if(parseInt(req.headers['x-esp8266-version'])<baseVersion){
+        var full_path = path.join(__dirname,'/bin/base.bin');
+        fs.readFile(full_path,"binary",function(err,file){
+            if(err){
+                res.writeHeader(500, {"Content-Type": "text/plain"});
+                res.write(err + "\n");
+                res.end();
+            }
+            else{
+                res.writeHeader(200,
+                   {"Content-Type": "application/octect-stream",
+                   "Content-Disposition": "attachment;filename="+path.basename(full_path),
+                   "Content-Length": ""+fs.statSync(full_path)["size"],
+                   "x-MD5": md5.sync(full_path)});
+                res.write(file, "binary");
+                res.end();
+            }
+        });
+    }
+    else{
+        res.writeHeader(304, {"Content-Type": "text/plain"});
+        res.write("304 Not Modified\n");
+        res.end();
+    }
+    
+});
+
 
 var port = 80;
 server.listen(port);
@@ -18,6 +55,7 @@ io.on('connection',function(socket){
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
         console.log("client "+socket['id']+" joined room "+roomName);
+        CheckForUpdate(roomName);
     });
 });
 
@@ -174,6 +212,12 @@ function SetStrip(stationId,colorArray){
     
 }
 
+/*
+ * Force clients to check for firmware updates
+ */
+function CheckForUpdate(stationId){
+    io.sockets.to(stationId).emit('checkForUpdate',"");
+}
 
 /*
  * Helper method for HSV color model
@@ -207,6 +251,14 @@ function HSVtoRGB(h, s, v) {
 
 
 
+
+
+
+
+/*
+ * Rainbow test code below here
+ */
+
 var hue = 120;
 var hueBase = 360;
 var colorString = '';
@@ -236,4 +288,4 @@ var doStuff = function(){
     
     
 };
-setInterval(doStuff,100);
+//setInterval(doStuff,100);
