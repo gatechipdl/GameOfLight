@@ -1,4 +1,8 @@
 //use Flash size 4MB (1M SPIFFS)
+//Flash real id:   001640EF
+//Flash real size: 4194304
+
+#include <EEPROM.h>
 
 #include <Arduino.h>
 
@@ -12,8 +16,6 @@
 #include "base64.hpp"
 
 #define USE_SERIAL Serial
-
-#define STATION_ID 14
 
 #include "FastLED.h"
 
@@ -43,11 +45,12 @@ byte packetBytesSerialBuffer[STATION_BYTE_COUNT];
 byte packetBytes[STATION_BYTE_COUNT];
 
 CRGB stationColors[STATION_SEGMENT_COUNT];
-int stationId = STATION_ID;
-const char* stationId_char = "14";
+int stationId = 0; //need to pull from EEPROM asap
+
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
 const char* server_ip = "192.168.0.100";
+const char* baseVersion = "1000";
 
 boolean doRedraw = true;
 boolean doPrepareStationSegmentColors = false;
@@ -68,6 +71,9 @@ void connectSocketEventHandler(const char * payload, size_t payloadLength) {
   //const char* temp = number2char(stationId);
   //*temp++ = '\0';
   //temp[temp.length] = '\0';
+  String stationId_str = String(stationId,DEC);
+  const char* stationId_char = stationId_str.c_str();
+  //itoa(stationId,stationId_char,10);
   webSocket.emit("subscribe", stationId_char);
   webSocket.emit("subscribe", "stations");
 }
@@ -177,18 +183,68 @@ void setFivesOldSocketEventHandler(const char * payload, size_t payloadLength) {
   doRedraw = true;
 }
 
+void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got checkForUpdate message: %s\n", payload);
+  checkForUpdate();
+}
+
+void checkForUpdate(){
+  //t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100",80,"/update/base","1000");
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100:80/update/base",baseVersion);
+   
+  switch(ret) {
+    case HTTP_UPDATE_FAILED:
+      USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+        break;
+        
+    case HTTP_UPDATE_NO_UPDATES:
+      USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+    
+    case HTTP_UPDATE_OK:
+      USE_SERIAL.println("HTTP_UPDATE_OK");
+        break;
+    }
+}
+
+//http://forum.arduino.cc/index.php?topic=37470.0
+//This function will write a 2 byte integer to the eeprom at the specified address and address + 1
+void EEPROMWriteInt(int p_address, int p_value)
+ {
+  byte lowByte = ((p_value >> 0) & 0xFF);
+  byte highByte = ((p_value >> 8) & 0xFF);
+  
+  EEPROM.write(p_address, lowByte);
+  EEPROM.write(p_address + 1, highByte);
+ }
+
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+unsigned int EEPROMReadInt(int p_address)
+{
+  byte lowByte = EEPROM.read(p_address);
+  byte highByte = EEPROM.read(p_address + 1);
+  
+  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+}
+
 void setup() {
 
   delay(2000); // 2 second delay for recovery
-
+  
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
   // set master brightness control
   FastLED.setBrightness(max_brightness);
+
+  //turn all LEDs off immediately
   fill_solid(leds,STATION_LED_COUNT, CRGB(0,0,0));
   redraw();
+
+  EEPROM.begin(512);
+  stationId = EEPROMReadInt(0);
+  EEPROM.commit();
   
   USE_SERIAL.begin(115200);
 
@@ -198,32 +254,23 @@ void setup() {
   USE_SERIAL.println();
   USE_SERIAL.println();
 
-  for (uint8_t t = 5; t > 0; t--) {
+  for (uint8_t t = 11; t > 0; t--) {
     USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
     USE_SERIAL.flush();
     delay(1000);
   }
+
+  USE_SERIAL.printf("station id is %d\n", stationId);
   
   WiFiMulti.addAP(wifi_ssid,wifi_pass);
 
   while (WiFiMulti.run() != WL_CONNECTED) {
-    t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100",80,"/update/base","1000");
-    //t_httpUpdate_return  ret = ESPhttpUpdate.update("https://server/file.bin");
+    USE_SERIAL.printf(".");
+    delay(100);
+  }
 
-    switch(ret) {
-        case HTTP_UPDATE_FAILED:
-            USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            break;
-
-        case HTTP_UPDATE_NO_UPDATES:
-            USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
-            break;
-
-        case HTTP_UPDATE_OK:
-            USE_SERIAL.println("HTTP_UPDATE_OK");
-            break;
-    }
-    delay(1000);
+  if (WiFiMulti.run() == WL_CONNECTED) {
+    checkForUpdate();
   }
   
   webSocket.on("connect", connectSocketEventHandler);
@@ -233,6 +280,7 @@ void setup() {
   webSocket.on("setColors", setColorsSocketEventHandler);
   webSocket.on("setFives", setFivesSocketEventHandler);
   webSocket.on("setFivesOld", setFivesOldSocketEventHandler);
+  webSocket.on("checkForUpdate", checkForUpdateSocketEventHandler);
   
   webSocket.begin(server_ip);
   USE_SERIAL.printf("got to the bottom here\n");
