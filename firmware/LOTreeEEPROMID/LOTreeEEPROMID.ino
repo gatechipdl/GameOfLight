@@ -8,7 +8,7 @@
 
 #include <EEPROM.h>
 
-#define STATION_ID 07
+#define STATION_ID 17
 int stationId = STATION_ID;
 
 // the current address in the EEPROM (i.e. which byte
@@ -17,9 +17,23 @@ int addr = 0;
 
 void setup()
 {
+  
+  delay(2000);
+  ESP.wdtDisable(); //stop the software watchdog, but not more than 6 seconds
+  delay(1000);
+  ESP.wdtEnable(259200000); //3 days
+  ESP.wdtFeed();
+  
   EEPROM.begin(512);
+  for (int i = 0; i < 512; i++){
+    EEPROM.write(i, 0);
+  }
   EEPROMWriteInt(0, stationId);
+  EEPROM.commit();
   EEPROM.end(); //also commits in addition to release from RAM copy
+  Serial.begin(115200);
+  Serial.print("station id is ");
+  Serial.println(stationId);
 }
 
 void loop()
