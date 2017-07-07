@@ -151,13 +151,16 @@ function SetColors(stationId,startIndex,colorArray){
  */
 function SetFiveColors(stationId,fiveColorArray){
     //update server's copy of the LED custer state
-    for(var i=0;i<5;i++){
-        for(var j=0;j<LED_CLUSTER_COUNT/5;j++){
-            colors[stationId][i*9+j].r = fiveColorArray[i].r;
-            colors[stationId][i*9+j].g = fiveColorArray[i].g;
-            colors[stationId][i*9+j].b = fiveColorArray[i].b;
-        }
-    } 
+    if(stationId<STATION_COUNT){
+        for(var i=0;i<5;i++){
+            for(var j=0;j<LED_CLUSTER_COUNT/5;j++){
+                colors[stationId][i*9+j].r = fiveColorArray[i].r;
+                colors[stationId][i*9+j].g = fiveColorArray[i].g;
+                colors[stationId][i*9+j].b = fiveColorArray[i].b;
+            }
+        } 
+    }
+    
     
 //    var dataArrayBuffer = new ArrayBuffer(15);
 //    var dataBuffer = new Uint8Array(dataArrayBuffer);
@@ -283,9 +286,16 @@ var doStuff = function(){
         SetFiveColors(i,fiveColors);
     }
     
+    fiveColors[0] = HSVtoRGB(0.0,1.0,1.0);
+    fiveColors[1] = HSVtoRGB(0.0,1.0,1.0);
+    fiveColors[2] = HSVtoRGB(0.0,1.0,1.0);
+    fiveColors[3] = HSVtoRGB(0.0,1.0,1.0);
+    fiveColors[4] = HSVtoRGB(0.0,1.0,1.0);
+    SetFiveColors(24932,fiveColors);
+    
     //console.log(fiveColors[0]);
     
     
     
 };
-//setInterval(doStuff,100);
+setInterval(doStuff,5000);
