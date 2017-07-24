@@ -54,6 +54,7 @@ io.on('connection',function(socket){
     console.log("client "+socket['id']+" connected");
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
+        socket.join('allStations');
         console.log("client "+socket['id']+" joined room "+roomName);
         CheckForUpdate(roomName);
     });
@@ -107,11 +108,13 @@ function ClearAll(){
  * mimics FastLED FillSolid method
  */
 function FillSolid(stationId,startIndex,numToFill,ledColor){
-    //update server's copy of the LED custer state
-    for(var i=startIndex;i<startIndex+numToFill;i++){
-        colors[stationId][i].r = ledColor.r;
-        colors[stationId][i].g = ledColor.g;
-        colors[stationId][i].b = ledColor.b;
+    if(!isNaN(stationId)){
+        //update server's copy of the LED custer state
+        for(var i=startIndex;i<startIndex+numToFill;i++){
+            colors[stationId][i].r = ledColor.r;
+            colors[stationId][i].g = ledColor.g;
+            colors[stationId][i].b = ledColor.b;
+        }
     }
     var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
     io.sockets.to(stationId).emit('fillSolid',dataBuffer);
@@ -121,10 +124,12 @@ function FillSolid(stationId,startIndex,numToFill,ledColor){
  * Set a single LED color on a specific station
  */
 function SetColor(stationId,startIndex,ledColor){
-    //update server's copy of the LED custer state
-    colors[stationId][startIndex].r = ledColor.r;
-    colors[stationId][startIndex].g = ledColor.g;
-    colors[stationId][startIndex].b = ledColor.b;
+    if(!isNaN(stationId)){
+        //update server's copy of the LED custer state
+        colors[stationId][startIndex].r = ledColor.r;
+        colors[stationId][startIndex].g = ledColor.g;
+        colors[stationId][startIndex].b = ledColor.b;
+    }
     
     var dataBuffer = new Uint8Array([startIndex,ledColor.r,ledColor.g,ledColor.b]);
     io.sockets.to(stationId).emit('setColor',dataBuffer);
@@ -150,15 +155,17 @@ function SetColors(stationId,startIndex,colorArray){
  * GOL Station 5 segment code
  */
 function SetFiveColors(stationId,fiveColorArray){
-    //update server's copy of the LED custer state
-    if(stationId<STATION_COUNT){
-        for(var i=0;i<5;i++){
-            for(var j=0;j<LED_CLUSTER_COUNT/5;j++){
-                colors[stationId][i*9+j].r = fiveColorArray[i].r;
-                colors[stationId][i*9+j].g = fiveColorArray[i].g;
-                colors[stationId][i*9+j].b = fiveColorArray[i].b;
-            }
-        } 
+    if(!isNaN(stationId)){
+        //update server's copy of the LED custer state
+        if(stationId<STATION_COUNT){
+            for(var i=0;i<5;i++){
+                for(var j=0;j<LED_CLUSTER_COUNT/5;j++){
+                    colors[stationId][i*9+j].r = fiveColorArray[i].r;
+                    colors[stationId][i*9+j].g = fiveColorArray[i].g;
+                    colors[stationId][i*9+j].b = fiveColorArray[i].b;
+                }
+            } 
+        }
     }
     
     
@@ -298,4 +305,17 @@ var doStuff = function(){
     
     
 };
-setInterval(doStuff,5000);
+//setInterval(doStuff,5000);
+
+var doStuff2 = function(){
+    hue = (hue+1)%hueBase;
+    var hue2 = (Math.floor(hue/6)*6)%hueBase;
+    fiveColors[0] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[1] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[2] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[3] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[4] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    SetFiveColors('allStations',fiveColors);
+    //console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+}
+setInterval(doStuff2,1000/60);
