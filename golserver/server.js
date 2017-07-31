@@ -10,6 +10,14 @@ const path = require('path');
 const fs = require('fs');
 const md5 = require('md5-file');
 
+const dgram = require('dgram');
+const udpSocket = dgram.createSocket('udp4');
+var udpPortSend = 60000;
+var udpMulticastIP = '230.185.192.109';
+
+var udpPortRecv = 60001;
+var udpDestIP = '192.168.1.199';
+
 var baseVersion = 1000;
 
 // host everything in the public folder
@@ -29,10 +37,10 @@ app.get('/update/base',function(req,res){
             }
             else{
                 res.writeHeader(200,
-                   {"Content-Type": "application/octect-stream",
-                   "Content-Disposition": "attachment;filename="+path.basename(full_path),
-                   "Content-Length": ""+fs.statSync(full_path)["size"],
-                   "x-MD5": md5.sync(full_path)});
+                                {"Content-Type": "application/octect-stream",
+                                 "Content-Disposition": "attachment;filename="+path.basename(full_path),
+                                 "Content-Length": ""+fs.statSync(full_path)["size"],
+                                 "x-MD5": md5.sync(full_path)});
                 res.write(file, "binary");
                 res.end();
             }
@@ -43,12 +51,52 @@ app.get('/update/base',function(req,res){
         res.write("304 Not Modified\n");
         res.end();
     }
-    
+
 });
 
 
 var port = 80;
 server.listen(port);
+
+
+
+
+udpSocket.on('error', (err) =>{
+    console.log('udp socket error:\n${err.stack}');
+    console.log('closing the udp socket');
+    udpServer.close();
+    //TODO add function to restart the udp socket
+});
+
+udpSocket.on('message', (msg, rinfo) => {
+    console.log('udp socket got: ',msg,' from ',rinfo.address,':',rinfo.port);
+    parseData(msg);
+});
+
+udpSocket.on('listening', () => {
+    const address = udpSocket.address();
+    console.log('udp socket listening ',address.address,':',address.port);
+});
+
+//udpSocket.bind(udpPortRecv, () => {});
+udpSocket.bind(udpPortSend, function(){
+    server.setBroadcast(true);
+    server.setMulticastTTL(128);
+    server.addMembership(udpMulticastIP);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 io.on('connection',function(socket){
     console.log("client "+socket['id']+" connected");
@@ -130,7 +178,7 @@ function SetColor(stationId,startIndex,ledColor){
         colors[stationId][startIndex].g = ledColor.g;
         colors[stationId][startIndex].b = ledColor.b;
     }
-    
+
     var dataBuffer = new Uint8Array([startIndex,ledColor.r,ledColor.g,ledColor.b]);
     io.sockets.to(stationId).emit('setColor',dataBuffer);
 }
@@ -146,7 +194,7 @@ function SetColors(stationId,startIndex,colorArray){
     colors[stationId][ledIndex].r = ledColor.r;
     colors[stationId][ledIndex].g = ledColor.g;
     colors[stationId][ledIndex].b = ledColor.b;
-    
+
     var dataBuffer = new Uint8Array([ledIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
     io.sockets.to(stationId).emit('setColors',dataBuffer);
 }
@@ -167,30 +215,30 @@ function SetFiveColors(stationId,fiveColorArray){
             } 
         }
     }
-    
-    
-//    var dataArrayBuffer = new ArrayBuffer(15);
-//    var dataBuffer = new Uint8Array(dataArrayBuffer);
-//    dataArrayBuffer[0]=fiveColorArray[0].r;
-//    dataArrayBuffer[1]=fiveColorArray[0].g;
-//    dataArrayBuffer[2]=fiveColorArray[0].b;
-//    
-//    dataArrayBuffer[3]=fiveColorArray[1].r;
-//    dataArrayBuffer[4]=fiveColorArray[1].g;
-//    dataArrayBuffer[5]=fiveColorArray[1].b;
-//    
-//    dataArrayBuffer[6]=fiveColorArray[2].r;
-//    dataArrayBuffer[7]=fiveColorArray[2].g;
-//    dataArrayBuffer[8]=fiveColorArray[2].b;
-//    
-//    dataArrayBuffer[9]=fiveColorArray[3].r;
-//    dataArrayBuffer[10]=fiveColorArray[3].g;
-//    dataArrayBuffer[11]=fiveColorArray[3].b;
-//    
-//    dataArrayBuffer[12]=fiveColorArray[4].r;
-//    dataArrayBuffer[13]=fiveColorArray[4].g;
-//    dataArrayBuffer[14]=fiveColorArray[4].b;
-    
+
+
+    //    var dataArrayBuffer = new ArrayBuffer(15);
+    //    var dataBuffer = new Uint8Array(dataArrayBuffer);
+    //    dataArrayBuffer[0]=fiveColorArray[0].r;
+    //    dataArrayBuffer[1]=fiveColorArray[0].g;
+    //    dataArrayBuffer[2]=fiveColorArray[0].b;
+    //    
+    //    dataArrayBuffer[3]=fiveColorArray[1].r;
+    //    dataArrayBuffer[4]=fiveColorArray[1].g;
+    //    dataArrayBuffer[5]=fiveColorArray[1].b;
+    //    
+    //    dataArrayBuffer[6]=fiveColorArray[2].r;
+    //    dataArrayBuffer[7]=fiveColorArray[2].g;
+    //    dataArrayBuffer[8]=fiveColorArray[2].b;
+    //    
+    //    dataArrayBuffer[9]=fiveColorArray[3].r;
+    //    dataArrayBuffer[10]=fiveColorArray[3].g;
+    //    dataArrayBuffer[11]=fiveColorArray[3].b;
+    //    
+    //    dataArrayBuffer[12]=fiveColorArray[4].r;
+    //    dataArrayBuffer[13]=fiveColorArray[4].g;
+    //    dataArrayBuffer[14]=fiveColorArray[4].b;
+
     var dataBuffer2 = new Uint8Array([
         fiveColorArray[0].r,fiveColorArray[0].g,fiveColorArray[0].b,
         fiveColorArray[1].r,fiveColorArray[1].g,fiveColorArray[1].b,
@@ -198,7 +246,7 @@ function SetFiveColors(stationId,fiveColorArray){
         fiveColorArray[3].r,fiveColorArray[3].g,fiveColorArray[3].b,
         fiveColorArray[4].r,fiveColorArray[4].g,fiveColorArray[4].b
     ]);
-    
+
     io.sockets.to(stationId).emit('setFives',base64js.fromByteArray(dataBuffer2));
     //console.log(base64js.fromByteArray(dataBuffer2));
 }
@@ -219,7 +267,7 @@ function SyncColorsFromServer(){
  * or used for more efficient devliery of complete color changes
  */
 function SetStrip(stationId,colorArray){
-    
+
 }
 
 /*
@@ -249,7 +297,7 @@ function HSVtoRGB(h, s, v) {
         case 3: r = p, g = q, b = v; break;
         case 4: r = t, g = p, b = v; break;
         case 5: r = v, g = p, b = q; break;
-    }
+                 }
     return {
         r: Math.round(r * 255),
         g: Math.round(g * 255),
@@ -289,21 +337,21 @@ var doStuff = function(){
         fiveColors[3] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
         t_hue = (hue+5)%hueBase;
         fiveColors[4] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
-        
+
         SetFiveColors(i,fiveColors);
     }
-    
+
     fiveColors[0] = HSVtoRGB(0.0,1.0,1.0);
     fiveColors[1] = HSVtoRGB(0.0,1.0,1.0);
     fiveColors[2] = HSVtoRGB(0.0,1.0,1.0);
     fiveColors[3] = HSVtoRGB(0.0,1.0,1.0);
     fiveColors[4] = HSVtoRGB(0.0,1.0,1.0);
     SetFiveColors(24932,fiveColors);
-    
+
     //console.log(fiveColors[0]);
-    
-    
-    
+
+
+
 };
 //setInterval(doStuff,5000);
 
@@ -318,4 +366,38 @@ var doStuff2 = function(){
     SetFiveColors('allStations',fiveColors);
     //console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
 }
-setInterval(doStuff2,1000/60);
+//setInterval(doStuff2,1000/60);
+
+
+var doStuff3 = function(){
+    hue = (hue+1)%hueBase;
+    var hue2 = (Math.floor(hue/6)*6)%hueBase;
+    fiveColors[0] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[1] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[2] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[3] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    fiveColors[4] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
+    SetFiveColors('allStations',fiveColors);
+    function udpSendColors(){
+        var msg = new Buffer.from(
+            fiveColors[0].r,
+            fiveColors[0].g,
+            fiveColors[0].b,
+            fiveColors[1].r,
+            fiveColors[1].g,
+            fiveColors[1].b,
+            fiveColors[2].r,
+            fiveColors[2].g,
+            fiveColors[2].b,
+            fiveColors[3].r,
+            fiveColors[3].g,
+            fiveColors[3].b,
+            fiveColors[4].r,
+            fiveColors[4].g,
+            fiveColors[4].b
+        );
+        udpSocket.send(msg,0,msg.length,udpPortSend,udpMulticastIP);
+    }
+    //console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+}
+setInterval(doStuff3,1000/60);
