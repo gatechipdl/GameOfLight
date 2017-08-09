@@ -230,10 +230,10 @@ unsigned int EEPROMReadInt(int p_address)
 void setup() {
 
   delay(2000); // 2 second delay for recovery
-  ESP.wdtDisable(); //stop the software watchdog, but not more than 6 seconds
-  delay(1000);
-  ESP.wdtEnable(259200000); //3 days
-  ESP.wdtFeed();
+//  ESP.wdtDisable(); //stop the software watchdog, but not more than 6 seconds
+//  delay(1000);
+//  ESP.wdtEnable(259200000); //3 days
+//  ESP.wdtFeed();
   
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -248,7 +248,7 @@ void setup() {
 
   EEPROM.begin(512);
   stationId = EEPROMReadInt(0);
-  EEPROM.commit();
+  EEPROM.end();
   
   USE_SERIAL.begin(115200);
 

@@ -8,7 +8,7 @@
 
 #include <EEPROM.h>
 
-#define STATION_ID 17
+#define STATION_ID 18
 int stationId = STATION_ID;
 
 // the current address in the EEPROM (i.e. which byte

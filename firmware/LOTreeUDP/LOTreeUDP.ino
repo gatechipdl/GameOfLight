@@ -2,6 +2,8 @@
 //Flash real id:   001640EF
 //Flash real size: 4194304
 
+const char* baseVersion = "1002";
+
 #include <EEPROM.h>
 
 #include <Arduino.h>
@@ -50,7 +52,10 @@ int stationId = 0; //need to pull from EEPROM asap
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
 const char* server_ip = "192.168.0.100";
-const char* baseVersion = "1001";
+
+//IPAddress udpMulticastServerIp(230, 185, 192, 109);
+//uint16_t udpMulticastServerPort = 60000;
+//uint16_t udpPort = 60000;
 
 
 boolean doRedraw = true;
@@ -67,7 +72,7 @@ ESP8266WiFiMulti WiFiMulti;
 SocketIoClient webSocket;
 
 // UDP variables
-unsigned int udpPort = 5000;
+unsigned int udpPort = 60000;
 boolean udpConnected = false;
 //char packetBuffer[UDP_TX_PACKET_MAX_SIZE]; //buffer to hold incoming packet,
 //char ReplyBuffer[] = “acknowledged”; // a string to send back
@@ -416,9 +421,9 @@ unsigned int EEPROMReadInt(int p_address)
 
 void setup() {
 
-  delay(2000); // 2 second delay for recovery
+  delay(500); // 1/2 second delay for recovery
   ESP.wdtDisable(); //stop the software watchdog, but not more than 6 seconds
-  delay(1000);
+  delay(100);
   ESP.wdtEnable(259200000); //3 days
   ESP.wdtFeed();
   
@@ -435,7 +440,7 @@ void setup() {
 
   EEPROM.begin(512);
   stationId = EEPROMReadInt(0);
-  EEPROM.commit();
+  EEPROM.end();
   
   USE_SERIAL.begin(115200);
 
@@ -450,15 +455,24 @@ void setup() {
     USE_SERIAL.flush();
     delay(1000);
   }
-
-  USE_SERIAL.printf("station id is %d\n", stationId);
   
-  WiFiMulti.addAP(wifi_ssid,wifi_pass);
+  USE_SERIAL.printf("station id is %d\n", stationId);
+  USE_SERIAL.printf("firmware version is %s\n", baseVersion);
 
+  //WiFi.setOutputPower(0);
+  WiFiMulti.addAP(wifi_ssid,wifi_pass);
+  
+  USE_SERIAL.printf("attempting to connect to wifi\n");
   while (WiFiMulti.run() != WL_CONNECTED) {
     USE_SERIAL.printf(".");
-    delay(200);
+    delay(100);
   }
+  
+//  WiFi.begin(wifi_ssid, wifi_pass);
+//  while (WiFi.status() != WL_CONNECTED) {
+//    delay(1000);
+//    Serial.print(".");
+//  }
   USE_SERIAL.printf("\nconnected to wifi\n");
 
   if (WiFiMulti.run() == WL_CONNECTED) {
@@ -475,14 +489,24 @@ void setup() {
   
   webSocket.begin(server_ip);
 
+  USE_SERIAL.printf("begin udp multicast listening");
+  //udpSocket.beginMulticast(WiFi.localIP(),udpMulticastServerPort,udpMulticastServerIp);
+
+
+//  while(!udpSocket.beginMulticast(WiFi.localIP(),udpMulticastServerPort,udpMulticastServerIp)){
+//    USE_SERIAL.printf(".");
+//    delay(1000);
+//  }
+
+  
   while(!udpSocket.begin(udpPort)){
     USE_SERIAL.printf(".");
-    delay(200);
+    delay(100);
   }
-  USE_SERIAL.printf("\nconnected to udp\n");
+  USE_SERIAL.printf("\nconnected to udp multicast\n");
   udpConnected = true;
   
-  USE_SERIAL.printf("got to the bottom here\n");
+  USE_SERIAL.printf("got to the bottom of setup\n");
 }
 
 
@@ -490,28 +514,37 @@ void setup() {
 
 
 void loop() {
+  webSocket.loop();
   udpEvent();
   if (doRedraw) {
     redraw();
   }
 
   if (packetComplete) {
-    if((int)packetBytesBuffer[0]==stationId){
-      //startIndex
-      //numToFill,
-      //ledColor (r,g,b)
-      fill_solid(leds + demap64[packetBytesBuffer[1]],
-      demap64[packetBytesBuffer[2]],
-      CRGB(
-        demap64[packetBytesBuffer[3]],
-        demap64[packetBytesBuffer[4]],
-        demap64[packetBytesBuffer[5]]
-        )
-      );
-      doRedraw = (bool)demap64[packetBytesBuffer[6]];
+
+    for (int i = 0; i < STATION_LED_COUNT; i++) {
+      leds[i].r = (uint8_t)packetBytesBuffer[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+0];
+      leds[i].g = (uint8_t)packetBytesBuffer[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+2];
+      leds[i].b = (uint8_t)packetBytesBuffer[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+1];
     }
+//    if((int)packetBytesBuffer[0]==stationId){
+//      //startIndex
+//      //numToFill,
+//      //ledColor (r,g,b)
+//      fill_solid(leds + demap64[packetBytesBuffer[1]],
+//      demap64[packetBytesBuffer[2]],
+//      CRGB(
+//        demap64[packetBytesBuffer[3]],
+//        demap64[packetBytesBuffer[4]],
+//        demap64[packetBytesBuffer[5]]
+//        )
+//      );
+      //doRedraw = (bool)demap64[packetBytesBuffer[6]];
+    }
+    doRedraw = true;
     packetComplete = false;
   }
+  //USE_SERIAL.printf("time:%u\n",millis());
 }
 
 
@@ -526,20 +559,30 @@ void redraw() {
 
 
 void udpEvent(){
-  while (udpSocket.available()){
-    // get the new byte:
-    char inChar = (char)Serial.read();
-    // add it to the inputString:
-    packetBytes[packetBytesIndex] = inChar;
-    packetBytesIndex++;
-    
-    // if the incoming character is a newline, set a flag
-    // so the main loop can do something about it:
-    if (inChar == '\n') {
-      packetLength = packetBytesIndex; //used to copy and parse
-      packetBytesIndex = 0; //reset counter
-      packetComplete = true;
-      memcpy(packetBytes,packetBytesBuffer,packetLength); //copy into buffer
-    }
+  int packetSize = udpSocket.parsePacket();
+  if(packetSize){
+    USE_SERIAL.printf("received packet of size %d",packetSize);
+    int len = udpSocket.read(packetBytes, STATION_BYTE_COUNT);
+    packetComplete = true;
+    memcpy(packetBytes,packetBytesBuffer,packetSize); //copy into buffer
   }
+  
+//  while (udpSocket.available()){
+//    // get the new byte:
+//    //char inChar = (char)udpSocket.read();
+//    //USE_SERIAL.printf("%c",inChar);
+//    USE_SERIAL.printf("got something");
+//    // add it to the inputString:
+////    packetBytes[packetBytesIndex] = inChar;
+////    packetBytesIndex++;
+////    
+////    // if the incoming character is a newline, set a flag
+////    // so the main loop can do something about it:
+////    if (inChar == '\n') {
+////      packetLength = packetBytesIndex; //used to copy and parse
+////      packetBytesIndex = 0; //reset counter
+////      packetComplete = true;
+////      memcpy(packetBytes,packetBytesBuffer,packetLength); //copy into buffer
+////    }
+//  }
 }
