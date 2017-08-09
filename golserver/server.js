@@ -13,12 +13,12 @@ const md5 = require('md5-file');
 const dgram = require('dgram');
 const udpSocket = dgram.createSocket('udp4');
 var udpPortSend = 60000;
-var udpMulticastIP = '230.185.192.109';
+//var udpMulticastIP = '230.185.192.109';
 
 var udpPortRecv = 60001;
 var udpDestIP = '192.168.1.199';
 
-var baseVersion = 1000;
+var baseVersion = 1001;
 
 // host everything in the public folder
 app.use(express.static(__dirname + '/public')); 
@@ -78,12 +78,12 @@ udpSocket.on('listening', () => {
     console.log('udp socket listening ',address.address,':',address.port);
 });
 
-//udpSocket.bind(udpPortRecv, () => {});
-udpSocket.bind(udpPortSend, function(){
-    server.setBroadcast(true);
-    server.setMulticastTTL(128);
-    server.addMembership(udpMulticastIP);
-});
+udpSocket.bind(udpPortRecv, () => {});
+//udpSocket.bind(udpPortSend, function(){
+//    udpSocket.setBroadcast(true);
+//    udpSocket.setMulticastTTL(128);
+//    udpSocket.addMembership(udpMulticastIP);
+//});
 
 
 
@@ -95,7 +95,11 @@ udpSocket.bind(udpPortSend, function(){
 
 
 
-
+var clientSockets = {};
+//node id
+//socket io id
+//ip address
+//udp send port: 60000
 
 
 io.on('connection',function(socket){
@@ -104,6 +108,22 @@ io.on('connection',function(socket){
         socket.join(roomName);
         socket.join('allStations');
         console.log("client "+socket['id']+" joined room "+roomName);
+        console.dir(socket.handshake.address);
+        var tAddress = socket.handshake.address;
+        var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
+        
+        console.log(idx);
+        clientSockets[roomName] = {
+            'iosocket':socket['id'],
+            'ipaddress':idx
+        }
+        socket.on('disconnect',function(){
+            for(var key in clientSockets){
+                if(clientSockets[key]['iosocket']==socket['id']){
+                    delete clientSockets[key];
+                }
+            }
+        });
         CheckForUpdate(roomName);
     });
 });
@@ -323,7 +343,7 @@ var colorString = '';
 
 var fiveColors = new Array(5).fill(new CRGB(0,0,0));
 
-var doStuff = function(){
+var doStuff1 = function(){
     hue = (hue+6)%hueBase;
     var t_hue = hue;
     for(var i=0;i<STATION_COUNT;i++){
@@ -348,12 +368,12 @@ var doStuff = function(){
     fiveColors[4] = HSVtoRGB(0.0,1.0,1.0);
     SetFiveColors(24932,fiveColors);
 
-    //console.log(fiveColors[0]);
+    console.log(fiveColors[0]);
 
 
 
 };
-//setInterval(doStuff,5000);
+//setInterval(doStuff1,5000);
 
 var doStuff2 = function(){
     hue = (hue+1)%hueBase;
@@ -364,10 +384,39 @@ var doStuff2 = function(){
     fiveColors[3] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     fiveColors[4] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     SetFiveColors('allStations',fiveColors);
-    //console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+    console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
 }
 //setInterval(doStuff2,1000/60);
 
+
+function sendUDPSocket(msg,nodeIdString){
+    //console.log('sending UDP Socket');
+    if(clientSockets.hasOwnProperty(nodeIdString)){
+        //console.log('sending to '+nodeIdString+' at '+clientSockets[nodeIdString]['ipaddress']);
+        udpSocket.send(msg,0,msg.length,udpPortSend,clientSockets[nodeIdString]['ipaddress']);
+    }
+}
+
+function udpSendColors(){
+    var msg = new Buffer.from([
+        fiveColors[0].r,
+        fiveColors[0].g,
+        fiveColors[0].b,
+        fiveColors[1].r,
+        fiveColors[1].g,
+        fiveColors[1].b,
+        fiveColors[2].r,
+        fiveColors[2].g,
+        fiveColors[2].b,
+        fiveColors[3].r,
+        fiveColors[3].g,
+        fiveColors[3].b,
+        fiveColors[4].r,
+        fiveColors[4].g,
+        fiveColors[4].b]
+    );
+    sendUDPSocket(msg,'7');
+}
 
 var doStuff3 = function(){
     hue = (hue+1)%hueBase;
@@ -377,27 +426,10 @@ var doStuff3 = function(){
     fiveColors[2] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     fiveColors[3] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     fiveColors[4] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
-    SetFiveColors('allStations',fiveColors);
-    function udpSendColors(){
-        var msg = new Buffer.from(
-            fiveColors[0].r,
-            fiveColors[0].g,
-            fiveColors[0].b,
-            fiveColors[1].r,
-            fiveColors[1].g,
-            fiveColors[1].b,
-            fiveColors[2].r,
-            fiveColors[2].g,
-            fiveColors[2].b,
-            fiveColors[3].r,
-            fiveColors[3].g,
-            fiveColors[3].b,
-            fiveColors[4].r,
-            fiveColors[4].g,
-            fiveColors[4].b
-        );
-        udpSocket.send(msg,0,msg.length,udpPortSend,udpMulticastIP);
-    }
-    //console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+    //SetFiveColors('allStations',fiveColors);
+    
+    console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+    udpSendColors();
 }
-setInterval(doStuff3,1000/60);
+//setInterval(doStuff2,100000/60);
+setInterval(doStuff3,100000/60);
