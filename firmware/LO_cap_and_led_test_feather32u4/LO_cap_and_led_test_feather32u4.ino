@@ -9,7 +9,7 @@ int const STATION_SEGMENTS = 5;
 int LED_COUNT = 45;
 int SEGMENT_LED_COUNT = 9;
 float STATION_HUE[STATION_SEGMENTS];
-float HUE_STEP = 0.002;
+float HUE_STEP = 0.001;
 float BRI_STEP = 0.03;
 float BRI_STEP2 = 0.007;
 float STATION_BRIGHTNESS[STATION_SEGMENTS];
@@ -62,7 +62,7 @@ void loop() {
         STATION_HUE[i] = (STATION_HUE[i] + HUE_STEP);
         STATION_HUE[i] = STATION_HUE[i] > 1.0 ? STATION_HUE[i] - 1.0 : STATION_HUE[i];
       }
-      if (i == 7) {
+      if (i == 5) {
         for (int j = STATION_SEGMENTS - 1; j >= 0; j--) {
           if (STATION_BRIGHTNESS[j] > 0.0) {
             STATION_BRIGHTNESS[j] = STATION_BRIGHTNESS[j] - BRI_STEP;
