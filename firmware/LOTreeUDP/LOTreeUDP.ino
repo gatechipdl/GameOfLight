@@ -505,18 +505,22 @@ void setup() {
 
   //WiFi.setOutputPower(0);
   WiFiMulti.addAP(wifi_ssid,wifi_pass);
-  
-  USE_SERIAL.printf("attempting to connect to wifi\n");
-  while (WiFiMulti.run() != WL_CONNECTED) {
-    USE_SERIAL.printf(".");
-    delay(100);
-  }
-  
-//  WiFi.begin(wifi_ssid, wifi_pass);
-//  while (WiFi.status() != WL_CONNECTED) {
-//    delay(1000);
-//    Serial.print(".");
+
+//WiFiMulti doesn't seem to work well
+//  int a = 0;
+//  int b = 40;
+//  USE_SERIAL.printf("attempting to connect to wifi\n");
+//  while (WiFiMulti.run() != WL_CONNECTED || a>b) {
+//    USE_SERIAL.printf(".");
+//    a++;
+//    delay(100);
 //  }
+  
+  WiFi.begin(wifi_ssid, wifi_pass);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+    Serial.print(".");
+  }
   USE_SERIAL.printf("\nconnected to wifi\n");
 
   if (WiFiMulti.run() == WL_CONNECTED) {
@@ -597,7 +601,11 @@ void loop() {
     FastLED.delay(1000/120);
     EVERY_N_MILLISECONDS(20){gHue++;}
   }
-  EVERY_N_SECONDS(15){doStrandTest=!doStrandTest;}
+  EVERY_N_SECONDS(15){
+    fill_solid(leds,STATION_LED_COUNT, CRGB(0,0,0));
+    FastLED.show();
+    doStrandTest=!doStrandTest;
+    }
 }
 
 
