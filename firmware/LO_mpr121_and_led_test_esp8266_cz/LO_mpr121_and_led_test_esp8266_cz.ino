@@ -165,9 +165,8 @@ void loop() {
       }
     }
   }
-}
 
-updateStation();
+  updateStation();
 }
 
 void updateStation() {
