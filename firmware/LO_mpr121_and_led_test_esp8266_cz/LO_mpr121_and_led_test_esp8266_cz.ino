@@ -156,7 +156,7 @@ void loop() {
             } else {
               if (j == 0) {
                 for (int k = 0; k < STATION_SEGMENTS; k++) {
-                  STATION_SAT[k] == 1.0;
+                  STATION_SAT[k] = 1.0;
                 }
               }
             }
