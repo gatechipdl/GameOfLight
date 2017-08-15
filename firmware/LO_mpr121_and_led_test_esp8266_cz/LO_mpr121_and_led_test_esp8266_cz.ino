@@ -132,43 +132,42 @@ void loop() {
       }
     }
     updateStation();
-    return;
-  } else {
-    for (uint8_t i = 0; i < 12; i++) {
-      if (cap_dev[i] > cap_threshold) {
-        int bri_or_sat = i / 5;
-        int s = i - 5;
-        switch (bri_or_sat) {
-          case 0:
-            STATION_HUE[i] = (STATION_HUE[i] + HUE_STEP);
-            STATION_HUE[i] = STATION_HUE[i] > 1.0 ? STATION_HUE[i] - 1.0 : STATION_HUE[i];
-            break;
-          case 1:
-            STATION_SAT[s] = (STATION_SAT[s] + SAT_STEP[s]);
-            SAT_STEP[s] = STATION_SAT[s] >= 1.0 ? SAT_STEP[s] * -1 : STATION_SAT[s] <= 0.0 ? SAT_STEP[s] * -1 : SAT_STEP[s];
-            STATION_SAT[s] = STATION_SAT[s] >= 1.0 ? 1.0 : STATION_SAT[s] <= 0.0 ? 0.0 : STATION_SAT[s];
-            break;
-          default: //case 2
-            for (int j = STATION_SEGMENTS - 1; j >= 0; j--) {
-              if (STATION_BRI[j] > 0.0) {
-                STATION_BRI[j] = STATION_BRI[j] - BRI_STEP;
-                STATION_BRI[j] = STATION_BRI[j] <= 0.0 ? 0.0 : STATION_BRI[j];
-                break;
-              } else {
-                if (j == 0) {
-                  for (int k = 0; k < STATION_SEGMENTS; k++) {
-                    STATION_SAT[k] == 1.0;
-                  }
+  }
+  for (uint8_t i = 0; i < 12; i++) {
+    if (cap_dev[i] > cap_threshold) {
+      int bri_or_sat = i / 5;
+      int s = i - 5;
+      switch (bri_or_sat) {
+        case 0:
+          STATION_HUE[i] = (STATION_HUE[i] + HUE_STEP);
+          STATION_HUE[i] = STATION_HUE[i] > 1.0 ? STATION_HUE[i] - 1.0 : STATION_HUE[i];
+          break;
+        case 1:
+          STATION_SAT[s] = (STATION_SAT[s] + SAT_STEP[s]);
+          SAT_STEP[s] = STATION_SAT[s] >= 1.0 ? SAT_STEP[s] * -1 : STATION_SAT[s] <= 0.0 ? SAT_STEP[s] * -1 : SAT_STEP[s];
+          STATION_SAT[s] = STATION_SAT[s] >= 1.0 ? 1.0 : STATION_SAT[s] <= 0.0 ? 0.0 : STATION_SAT[s];
+          break;
+        default: //case 2
+          for (int j = STATION_SEGMENTS - 1; j >= 0; j--) {
+            if (STATION_BRI[j] > 0.0) {
+              STATION_BRI[j] = STATION_BRI[j] - BRI_STEP;
+              STATION_BRI[j] = STATION_BRI[j] <= 0.0 ? 0.0 : STATION_BRI[j];
+              break;
+            } else {
+              if (j == 0) {
+                for (int k = 0; k < STATION_SEGMENTS; k++) {
+                  STATION_SAT[k] == 1.0;
                 }
               }
             }
-            break;
-        }
+          }
+          break;
       }
     }
   }
+}
 
-  updateStation();
+updateStation();
 }
 
 void updateStation() {
