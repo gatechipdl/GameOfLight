@@ -1,5 +1,7 @@
 'use strict';
 
+const baseVersion = 1006;
+
 const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
@@ -14,11 +16,9 @@ const dgram = require('dgram');
 const udpSocket = dgram.createSocket('udp4');
 var udpPortSend = 60000;
 //var udpMulticastIP = '230.185.192.109';
-
 var udpPortRecv = 60001;
 var udpDestIP = '192.168.1.199';
 
-var baseVersion = 1001;
 
 // host everything in the public folder
 app.use(express.static(__dirname + '/public')); 
@@ -26,16 +26,20 @@ app.use(express.static(__dirname + '/public'));
 //check github.com/esp8266/Arduino/issues/2228 for example
 app.get('/update/base',function(req,res){
     //check version somehow
-    //console.dir(req.headers);
+    
+    console.log('a device is requesting an update');
+    console.dir(req.headers);
     if(parseInt(req.headers['x-esp8266-version'])<baseVersion){
         var full_path = path.join(__dirname,'/bin/base.bin');
         fs.readFile(full_path,"binary",function(err,file){
             if(err){
+                console.log('error uploading new firmware');
                 res.writeHeader(500, {"Content-Type": "text/plain"});
                 res.write(err + "\n");
                 res.end();
             }
             else{
+                console.log('uploading new firmware');
                 res.writeHeader(200,
                                 {"Content-Type": "application/octect-stream",
                                  "Content-Disposition": "attachment;filename="+path.basename(full_path),
@@ -47,6 +51,7 @@ app.get('/update/base',function(req,res){
         });
     }
     else{
+        console.log('not uploading new firmware');
         res.writeHeader(304, {"Content-Type": "text/plain"});
         res.write("304 Not Modified\n");
         res.end();
@@ -58,6 +63,42 @@ app.get('/update/base',function(req,res){
 var port = 80;
 server.listen(port);
 
+
+
+//stations = [
+//    ESP_1089E5	60-01-94-10-89-E5	192.168.0.102	01:09:16
+//3	ESP_0FF841	60-01-94-0F-F8-41	192.168.0.103	01:09:18
+//4	ESP_108363	60-01-94-10-83-63	192.168.0.104	01:09:16
+//5	ESP_108507	60-01-94-10-85-07	192.168.0.105	01:40:14
+//6	ESP_0FF49E	60-01-94-0F-F4-9E	192.168.0.106	01:09:16
+//7	ESP_108BE2	60-01-94-10-8B-E2	192.168.0.107	01:09:16
+//8	ESP_0FF846	60-01-94-0F-F8-46	192.168.0.108	01:09:16
+//9	ESP_0E7780	60-01-94-0E-77-80	192.168.0.109	01:09:15
+//10	ESP_1083B1	60-01-94-10-83-B1	192.168.0.110	01:09:15
+//11	ESP_108B42	60-01-94-10-8B-42	192.168.0.111	01:09:16
+//12	ESP_0E7772	60-01-94-0E-77-72	192.168.0.112	01:09:20
+//13	ESP_108446	60-01-94-10-84-46	192.168.0.113	01:40:16
+//14	ESP_107D19	60-01-94-10-7D-19	192.168.0.114	01:09:16
+//15	ESP_0E75FE	60-01-94-0E-75-FE	192.168.0.115	01:09:16
+//16	ESP_0E777D	60-01-94-0E-77-7D	192.168.0.116	01:09:16
+//17	ESP_10835B	60-01-94-10-83-5B	192.168.0.117	01:09:16
+//18	ESP_0FF684	60-01-94-0F-F6-84	192.168.0.118	01:09:16
+//19	ESP_1080FB	60-01-94-10-80-FB	192.168.0.119	01:09:16
+//20	ESP_0FF4BB	60-01-94-0F-F4-BB	192.168.0.120	01:09:16
+//21	ESP_0E7545	60-01-94-0E-75-45	192.168.0.121	01:40:14
+//22	ESP_1083C7	60-01-94-10-83-C7	192.168.0.122	01:09:16
+//23	ESP_107EC9	60-01-94-10-7E-C9	192.168.0.123	01:09:16
+//24	ESP_0FF398	60-01-94-0F-F3-98	192.168.0.124	00:38:29
+//25	ESP_108A60	60-01-94-10-8A-60	192.168.0.125	01:38:09
+//26	ESP_0FF878	60-01-94-0F-F8-78	192.168.0.126	01:09:16
+//27	ESP_0FF634	60-01-94-0F-F6-34	192.168.0.127	01:09:16
+//28	ESP_108C51	60-01-94-10-8C-51	192.168.0.128	01:09:16
+//29	ESP_0E7620	60-01-94-0E-76-20	192.168.0.129	01:40:29
+//30	ESP_107CA2	60-01-94-10-7C-A2	192.168.0.130	01:09:16
+//31	ESP_108167	60-01-94-10-81-67	192.168.0.131	01:09:16
+//32	ESP_10818B	60-01-94-10-81-8B	192.168.0.132	01:09:16
+//33	ESP_0E7563	60-01-94-0E-75-63	192.168.0.133	01:40:14
+//34	ESP_107FB3	60-01-94-10-7F-B3
 
 
 
@@ -104,19 +145,27 @@ var clientSockets = {};
 
 io.on('connection',function(socket){
     console.log("client "+socket['id']+" connected");
+    ClearAll();
+    
+    socket.on('idhostnameipmac',function(data){
+        //TODO: parse the pieces and keep in a managed list
+        console.log('idhostnameipmac');
+        console.log(data);
+    });
+    
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
-        socket.join('allStations');
         console.log("client "+socket['id']+" joined room "+roomName);
         console.dir(socket.handshake.address);
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
-        
         console.log(idx);
-        clientSockets[roomName] = {
+        
+        clientSockets[socket['id']] = {
             'iosocket':socket['id'],
             'ipaddress':idx
         }
+        
         socket.on('disconnect',function(){
             for(var key in clientSockets){
                 if(clientSockets[key]['iosocket']==socket['id']){
@@ -124,7 +173,57 @@ io.on('connection',function(socket){
                 }
             }
         });
-        CheckForUpdate(roomName);
+        
+        if(roomName=='stations'){
+            CheckForUpdate(roomName);
+        }
+        
+        if(roomName=='browsers'){
+            socket.on('setModeRaw',function(dataRaw){
+                console.log(dataRaw);
+                var data64 = base64js.fromByteArray(new Uint8Array([dataRaw]));
+                console.log(data64);
+                //socket.broadcast.to('stations').emit('setMode',data64);  - these didn't work
+                //io.sockets.to('stations').emit('setMode',data64); - these didn't work
+                io.sockets.emit('setMode',data64);
+            });
+            
+            socket.on('checkForUpdates',function(){
+                io.sockets.emit('checkForUpdate',"");
+            });
+            
+            socket.on('setFiveHueColors',function(){
+                fiveColors = new Array(5).fill(new CRGB(0,0,0));
+                hue = (hue+10)%hueBase;
+                console.log(hue);
+                var t_hue = hue;
+                t_hue = (hue+10)%hueBase;
+                fiveColors[0] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+                t_hue = (hue+20)%hueBase;
+                fiveColors[1] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+                t_hue = (hue+30)%hueBase;
+                fiveColors[2] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+                t_hue = (hue+40)%hueBase;
+                fiveColors[3] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+                t_hue = (hue+50)%hueBase;
+                fiveColors[4] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+                
+                var dataBuffer = new Uint8Array([
+                    fiveColors[0].r,fiveColors[0].g,fiveColors[0].b,
+                    fiveColors[1].r,fiveColors[1].g,fiveColors[1].b,
+                    fiveColors[2].r,fiveColors[2].g,fiveColors[2].b,
+                    fiveColors[3].r,fiveColors[3].g,fiveColors[3].b,
+                    fiveColors[4].r,fiveColors[4].g,fiveColors[4].b
+                ]);
+                var data64 = base64js.fromByteArray(dataBuffer);
+                io.sockets.emit('setFives',data64);
+            });
+            
+            socket.on('clearColors',function(){{
+                console.log('clear colors');
+                io.sockets.emit('clear',"");
+            }});
+        }
     });
 });
 
@@ -177,7 +276,7 @@ function ClearAll(){
  */
 function FillSolid(stationId,startIndex,numToFill,ledColor){
     if(!isNaN(stationId)){
-        //update server's copy of the LED custer state
+        //update server's copy of the LED cluster state
         for(var i=startIndex;i<startIndex+numToFill;i++){
             colors[stationId][i].r = ledColor.r;
             colors[stationId][i].g = ledColor.g;
@@ -386,7 +485,7 @@ var doStuff2 = function(){
     SetFiveColors('allStations',fiveColors);
     console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
 }
-//setInterval(doStuff2,1000/60);
+//setInterval(doStuff2,10000/60);
 
 
 function sendUDPSocket(msg,nodeIdString){
@@ -432,4 +531,5 @@ var doStuff3 = function(){
     udpSendColors();
 }
 //setInterval(doStuff2,100000/60);
-setInterval(doStuff3,100000/60);
+//setInterval(doStuff3,100000/60);
+setInterval(CheckForUpdate,100000);
