@@ -3,6 +3,7 @@
 //Flash real size: 4194304
 
 const char* baseVersion = "1002";
+//contains udp code
 
 #include <EEPROM.h>
 
@@ -84,8 +85,7 @@ bool packetComplete = false;
 WiFiUDP udpSocket;
 
 
-
-
+bool doStrandTest = true; //TODO: turn into function vectors for delegate function swaps
 
 
 
@@ -380,6 +380,12 @@ void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength
   checkForUpdate();
 }
 
+void setModeSocketEventHandler(const char * payload, size_t payloadLength){
+  USE_SERIAL.printf("got setMode: %s\n", payload);
+  //TODO: make more than just toggle
+  doStrandTest!=doStrandTest;
+}
+
 void checkForUpdate(){
   //t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100",80,"/update/base","1000");
   t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100:80/update/base",baseVersion);
@@ -417,6 +423,44 @@ unsigned int EEPROMReadInt(int p_address)
   byte highByte = EEPROM.read(p_address + 1);
   
   return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+}
+
+
+//TODO: parse incoming UDP packets
+void udpEvent(){
+  int packetSize = udpSocket.parsePacket();
+  if(packetSize){
+    USE_SERIAL.printf("received packet of size %d",packetSize);
+    int len = udpSocket.read(packetBytes, STATION_BYTE_COUNT);
+    packetComplete = true;
+    memcpy(packetBytes,packetBytesBuffer,packetSize); //copy into buffer
+  }
+  
+//  while (udpSocket.available()){
+//    // get the new byte:
+//    //char inChar = (char)udpSocket.read();
+//    //USE_SERIAL.printf("%c",inChar);
+//    USE_SERIAL.printf("got something");
+//    // add it to the inputString:
+////    packetBytes[packetBytesIndex] = inChar;
+////    packetBytesIndex++;
+////    
+////    // if the incoming character is a newline, set a flag
+////    // so the main loop can do something about it:
+////    if (inChar == '\n') {
+////      packetLength = packetBytesIndex; //used to copy and parse
+////      packetBytesIndex = 0; //reset counter
+////      packetComplete = true;
+////      memcpy(packetBytes,packetBytesBuffer,packetLength); //copy into buffer
+////    }
+//  }
+}
+
+
+
+void redraw() {
+  FastLED.show();
+  doRedraw = false;
 }
 
 void setup() {
@@ -461,18 +505,22 @@ void setup() {
 
   //WiFi.setOutputPower(0);
   WiFiMulti.addAP(wifi_ssid,wifi_pass);
-  
-  USE_SERIAL.printf("attempting to connect to wifi\n");
-  while (WiFiMulti.run() != WL_CONNECTED) {
-    USE_SERIAL.printf(".");
-    delay(100);
-  }
-  
-//  WiFi.begin(wifi_ssid, wifi_pass);
-//  while (WiFi.status() != WL_CONNECTED) {
-//    delay(1000);
-//    Serial.print(".");
+
+//WiFiMulti doesn't seem to work well
+//  int a = 0;
+//  int b = 40;
+//  USE_SERIAL.printf("attempting to connect to wifi\n");
+//  while (WiFiMulti.run() != WL_CONNECTED || a>b) {
+//    USE_SERIAL.printf(".");
+//    a++;
+//    delay(100);
 //  }
+  
+  WiFi.begin(wifi_ssid, wifi_pass);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+    Serial.print(".");
+  }
   USE_SERIAL.printf("\nconnected to wifi\n");
 
   if (WiFiMulti.run() == WL_CONNECTED) {
@@ -486,6 +534,7 @@ void setup() {
   webSocket.on("setColors", setColorsSocketEventHandler);
   webSocket.on("setFives", setFivesSocketEventHandler);
   webSocket.on("checkForUpdate", checkForUpdateSocketEventHandler);
+  webSocket.on("setMode",setModeSocketEventHandler);
   
   webSocket.begin(server_ip);
 
@@ -540,49 +589,31 @@ void loop() {
 //        )
 //      );
       //doRedraw = (bool)demap64[packetBytesBuffer[6]];
-    }
+//    }
     doRedraw = true;
     packetComplete = false;
   }
   //USE_SERIAL.printf("time:%u\n",millis());
-}
 
-
-
-
-
-void redraw() {
-  FastLED.show();
-  doRedraw = false;
-}
-
-
-
-void udpEvent(){
-  int packetSize = udpSocket.parsePacket();
-  if(packetSize){
-    USE_SERIAL.printf("received packet of size %d",packetSize);
-    int len = udpSocket.read(packetBytes, STATION_BYTE_COUNT);
-    packetComplete = true;
-    memcpy(packetBytes,packetBytesBuffer,packetSize); //copy into buffer
+  if(doStrandTest){
+    fill_rainbow(leds,STATION_LED_COUNT, gHue, 7);
+    FastLED.show();
+    FastLED.delay(1000/120);
+    EVERY_N_MILLISECONDS(20){gHue++;}
   }
-  
-//  while (udpSocket.available()){
-//    // get the new byte:
-//    //char inChar = (char)udpSocket.read();
-//    //USE_SERIAL.printf("%c",inChar);
-//    USE_SERIAL.printf("got something");
-//    // add it to the inputString:
-////    packetBytes[packetBytesIndex] = inChar;
-////    packetBytesIndex++;
-////    
-////    // if the incoming character is a newline, set a flag
-////    // so the main loop can do something about it:
-////    if (inChar == '\n') {
-////      packetLength = packetBytesIndex; //used to copy and parse
-////      packetBytesIndex = 0; //reset counter
-////      packetComplete = true;
-////      memcpy(packetBytes,packetBytesBuffer,packetLength); //copy into buffer
-////    }
-//  }
+  EVERY_N_SECONDS(15){
+    fill_solid(leds,STATION_LED_COUNT, CRGB(0,0,0));
+    FastLED.show();
+    doStrandTest=!doStrandTest;
+    }
 }
+
+
+
+
+
+
+
+
+
+
