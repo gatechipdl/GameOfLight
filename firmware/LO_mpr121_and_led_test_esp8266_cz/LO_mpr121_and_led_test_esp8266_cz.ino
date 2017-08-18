@@ -32,6 +32,79 @@ int cap_sum = 0;
 #define PIN_SDA 14
 #define PIN_SCL 5
 
+void updateStation() {
+  for (int i = 0; i < STATION_SEGMENTS; i++) {
+    uint32_t STATION_COLOR = HSV_to_RGB(i);
+    for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
+      strip.setPixelColor(i * SEGMENT_LED_COUNT + j, STATION_COLOR);
+    }
+  }
+  strip.show();
+}
+
+uint32_t HSV_to_RGB(int index) {
+  float hue = STATION_HUE[index];
+  float sat = sqrt(STATION_SAT[index]);
+  float bri = STATION_BRI[index];
+  hue = hue * 6;
+  int i = floor(hue);
+  float v = bri;
+  float f = hue - i;
+  float p = bri * (1 - sat);
+  float q = bri * (1 - sat * f);
+  float t = bri * (1 - sat * (1 - f));
+  byte r, g, b;
+  switch (i) {
+    case 0:
+      r = round(255 * v);
+      g = round(255 * t);
+      b = round(255 * p);
+      break;
+    case 1:
+      r = round(255 * q);
+      g = round(255 * v);
+      b = round(255 * p);
+      break;
+    case 2:
+      r = round(255 * p);
+      g = round(255 * v);
+      b = round(255 * t);
+      break;
+    case 3:
+      r = round(255 * p);
+      g = round(255 * q);
+      b = round(255 * v);
+      break;
+    case 4:
+      r = round(255 * t);
+      g = round(255 * p);
+      b = round(255 * v);
+      break;
+    default: // case 5:
+      r = round(255 * v);
+      g = round(255 * p);
+      b = round(255 * q);
+  }
+  return strip.Color(r, g, b);
+}
+
+void readRawInputs() {
+  int i;
+
+  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
+  MPR121.updateBaselineData();
+  MPR121.updateFilteredData();
+  cap_sum = 0;
+  for (i = 0; i < 12; i++) {    // 13 value pairs
+    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
+    Serial.print(cap_dev[i]);
+    Serial.print(" ");
+    if (cap_dev[i] > cap_threshold) {
+      cap_sum++;
+    }
+  }
+  Serial.println();
+}
 
 void setup() {
   Serial.begin(baudRate);
@@ -167,80 +240,6 @@ void loop() {
   }
 
   updateStation();
-}
-
-void updateStation() {
-  for (int i = 0; i < STATION_SEGMENTS; i++) {
-    uint32_t STATION_COLOR = HSV_to_RGB(i);
-    for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
-      strip.setPixelColor(i * SEGMENT_LED_COUNT + j, STATION_COLOR);
-    }
-  }
-  strip.show();
-}
-
-uint32_t HSV_to_RGB(int index) {
-  float hue = STATION_HUE[index];
-  float sat = sqrt(STATION_SAT[index]);
-  float bri = STATION_BRI[index];
-  hue = hue * 6;
-  int i = floor(hue);
-  float v = bri;
-  float f = hue - i;
-  float p = bri * (1 - sat);
-  float q = bri * (1 - sat * f);
-  float t = bri * (1 - sat * (1 - f));
-  byte r, g, b;
-  switch (i) {
-    case 0:
-      r = round(255 * v);
-      g = round(255 * t);
-      b = round(255 * p);
-      break;
-    case 1:
-      r = round(255 * q);
-      g = round(255 * v);
-      b = round(255 * p);
-      break;
-    case 2:
-      r = round(255 * p);
-      g = round(255 * v);
-      b = round(255 * t);
-      break;
-    case 3:
-      r = round(255 * p);
-      g = round(255 * q);
-      b = round(255 * v);
-      break;
-    case 4:
-      r = round(255 * t);
-      g = round(255 * p);
-      b = round(255 * v);
-      break;
-    default: // case 5:
-      r = round(255 * v);
-      g = round(255 * p);
-      b = round(255 * q);
-  }
-  return strip.Color(r, g, b);
-}
-
-void readRawInputs() {
-  int i;
-
-  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
-  MPR121.updateBaselineData();
-  MPR121.updateFilteredData();
-  cap_sum = 0;
-  for (i = 0; i < 12; i++) {    // 13 value pairs
-    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
-    Serial.print(cap_dev[i]);
-    Serial.print(" ");
-    if (cap_dev[i] > cap_threshold) {
-      cap_sum++;
-    }
-  }
-  Serial.println();
 }
 
 
