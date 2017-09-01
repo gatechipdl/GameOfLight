@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 1007;
+const baseVersion = 1008;
 
 const express = require('express');
 const app = express();
