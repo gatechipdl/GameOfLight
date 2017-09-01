@@ -7,11 +7,14 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1006";
+const char* baseVersion = "1007";
 
 #include <EEPROM.h>
 
 #include <Arduino.h>
+
+#include <MPR121.h>
+#include <Wire.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -49,6 +52,8 @@ uint8_t max_brightness = 255;
 #define COLOR_BYTE_COUNT 3
 #define STATION_BYTE_COUNT 15
 
+#define PIN_SDA 14
+#define PIN_SCL 5
 
 
 CRGB stationColors[STATION_SEGMENT_COUNT];
@@ -85,6 +90,28 @@ byte packetBytes[STATION_BYTE_COUNT];
 bool packetComplete = false;
 WiFiUDP udpSocket;
 
+// cap sense variables
+int const STATION_SEGMENTS = 5;
+int LED_COUNT = 45;
+int SEGMENT_LED_COUNT = 9;
+float STATION_HUE[STATION_SEGMENTS];
+float STATION_SAT[STATION_SEGMENTS];
+float HUE_STEP = 0.002;
+float SAT_STEP_MAG = 0.003;
+float SAT_STEP[STATION_SEGMENTS];
+float BRI_STEP = 0.03;
+float BRI_STEP2 = 0.007;
+float STATION_BRI[STATION_SEGMENTS];
+// this is the touch threshold - setting it low makes it more like a proximity trigger
+// default value is 40 for touch
+const int touchThreshold = 40;
+// this is the release threshold - must ALWAYS be smaller than the touch threshold
+// default value is 20 for touch
+const int releaseThreshold = 20;
+int cap_dev[12];
+int cap_threshold = 2;
+int cap_sum = 0;
+
 
 
 
@@ -95,13 +122,13 @@ WiFiUDP udpSocket;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*
- * Poor Man's Base64
- */
+   Poor Man's Base64
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char map64[64]={
+const char map64[64] = {
   'A', //  0
   'B', //  1
   'C', //  2
@@ -168,54 +195,54 @@ const char map64[64]={
   '/'  // 63
 };
 
-const uint8_t demap64[128]={
-   0, //  0
-   0, //  1
-   0, //  2
-   0, //  3
-   0, //  4
-   0, //  5
-   0, //  6
-   0, //  7
-   0, //  8
-   0, //  9
-   0, // 10
-   0, // 11
-   0, // 12
-   0, // 13
-   0, // 14
-   0, // 15
-   0, // 16
-   0, // 17
-   0, // 18
-   0, // 19
-   0, // 20
-   0, // 21
-   0, // 22
-   0, // 23
-   0, // 24
-   0, // 25
-   0, // 26
-   0, // 27
-   0, // 28
-   0, // 29
-   0, // 30
-   0, // 31
-   0, // 32
-   0, // 33
-   0, // 34
-   0, // 35
-   0, // 36
-   0, // 37
-   0, // 38
-   0, // 39
-   0, // 40
-   0, // 41
-   0, // 42
+const uint8_t demap64[128] = {
+  0, //  0
+  0, //  1
+  0, //  2
+  0, //  3
+  0, //  4
+  0, //  5
+  0, //  6
+  0, //  7
+  0, //  8
+  0, //  9
+  0, // 10
+  0, // 11
+  0, // 12
+  0, // 13
+  0, // 14
+  0, // 15
+  0, // 16
+  0, // 17
+  0, // 18
+  0, // 19
+  0, // 20
+  0, // 21
+  0, // 22
+  0, // 23
+  0, // 24
+  0, // 25
+  0, // 26
+  0, // 27
+  0, // 28
+  0, // 29
+  0, // 30
+  0, // 31
+  0, // 32
+  0, // 33
+  0, // 34
+  0, // 35
+  0, // 36
+  0, // 37
+  0, // 38
+  0, // 39
+  0, // 40
+  0, // 41
+  0, // 42
   63, // 43 '+'
-   0, // 44
-   0, // 45
-   0, // 46
+  0, // 44
+  0, // 45
+  0, // 46
   62, // 47 '/'
   52, // 48 '0'
   53, // 49 '1'
@@ -227,23 +254,23 @@ const uint8_t demap64[128]={
   59, // 55 '7'
   60, // 56 '8'
   61, // 57 '9'
-   0, // 58
-   0, // 59
-   0, // 60
-   0, // 61
-   0, // 62
-   0, // 63
-   0, // 64
-   0, // 65 'A'
-   1, // 66 'B'
-   2, // 67 'C'
-   3, // 68 'D'
-   4, // 69 'E'
-   5, // 70 'F'
-   6, // 71 'G'
-   7, // 72 'H'
-   8, // 73 'I'
-   9, // 74 'J'
+  0, // 58
+  0, // 59
+  0, // 60
+  0, // 61
+  0, // 62
+  0, // 63
+  0, // 64
+  0, // 65 'A'
+  1, // 66 'B'
+  2, // 67 'C'
+  3, // 68 'D'
+  4, // 69 'E'
+  5, // 70 'F'
+  6, // 71 'G'
+  7, // 72 'H'
+  8, // 73 'I'
+  9, // 74 'J'
   10, // 75 'K'
   11, // 76 'L'
   12, // 77 'M'
@@ -260,12 +287,12 @@ const uint8_t demap64[128]={
   23, // 88 'X'
   24, // 89 'Y'
   25, // 90 'Z'
-   0, // 91
-   0, // 92
-   0, // 93
-   0, // 94
-   0, // 95
-   0, // 96
+  0, // 91
+  0, // 92
+  0, // 93
+  0, // 94
+  0, // 95
+  0, // 96
   26, // 97 'a'
   27, // 98 'b'
   28, // 99 'c'
@@ -292,11 +319,11 @@ const uint8_t demap64[128]={
   49, //120 'x'
   50, //121 'y'
   51, //122 'z'
-   0, //123
-   0, //124
-   0, //125
-   0, //126
-   0  //127
+  0, //123
+  0, //124
+  0, //125
+  0, //126
+  0  //127
 };
 
 
@@ -305,8 +332,8 @@ const uint8_t demap64[128]={
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*
- * LEDs
- */
+   LEDs
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -320,58 +347,107 @@ void redraw() {
 
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   OTA Updates
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void checkForUpdate() {
+  //t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100",80,"/update/base","1000");
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100:80/update/base", baseVersion);
+
+  switch (ret) {
+    case HTTP_UPDATE_FAILED:
+      USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      break;
+
+    case HTTP_UPDATE_NO_UPDATES:
+      USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
+      break;
+
+    case HTTP_UPDATE_OK:
+      USE_SERIAL.println("HTTP_UPDATE_OK");
+      break;
+  }
+}
+
+
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*
- * Operation Functions
- */
+   EEPROM
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StrandTest(){
-  // 0 - rainbow
-  fill_rainbow(leds,STATION_LED_COUNT, gHue, 7);
-  FastLED.show();
-  FastLED.delay(1000/120);
-  EVERY_N_MILLISECONDS(20){gHue++;}
+//http://forum.arduino.cc/index.php?topic=37470.0
+//This function will write a 2 byte integer to the eeprom at the specified address and address + 1
+void EEPROMWriteInt(int p_address, int p_value)
+{
+  byte lowByte = ((p_value >> 0) & 0xFF);
+  byte highByte = ((p_value >> 8) & 0xFF);
+
+  EEPROM.write(p_address, lowByte);
+  EEPROM.write(p_address + 1, highByte);
 }
 
-void SlaveListen(){
-  // 1 - listening
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+unsigned int EEPROMReadInt(int p_address)
+{
+  byte lowByte = EEPROM.read(p_address);
+  byte highByte = EEPROM.read(p_address + 1);
+
+  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
 }
 
-void CapSenseControl(){
-  // 2 - cap sense controller
-}
 
-void StrandTest2(){
-  // 3 - sinelon
-  // a colored dot sweeping back and forth, with fading trails
-  fadeToBlackBy( leds, NUM_LEDS, 20);
-  int pos = beatsin16(13,0,NUM_LEDS);
-  leds[pos] += CHSV( gHue, 255, 192);
-  FastLED.show();
-  FastLED.delay(1000/120);
-  EVERY_N_MILLISECONDS(20){gHue++;}
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   UDP Events
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StrandTest3(){
-  // 4 - juggle
-  // eight colored dots, weaving in and out of sync with each other
-  fadeToBlackBy( leds, NUM_LEDS, 20);
-  byte dothue = 0;
-  for( int i = 0; i < 8; i++) {
-    leds[beatsin16(i+7,0,NUM_LEDS)] |= CHSV(dothue, 200, 255);
-    dothue += 32;
+//TODO: parse incoming UDP packets
+void udpEvent() {
+  int packetSize = udpSocket.parsePacket();
+  if (packetSize) {
+    USE_SERIAL.printf("received packet of size %d", packetSize);
+    int len = udpSocket.read(packetBytes, STATION_BYTE_COUNT);
+    packetComplete = true;
+    memcpy(packetBytes, packetBytesBuffer, packetSize); //copy into buffer
   }
-  FastLED.show();
-  FastLED.delay(1000/120);
-  EVERY_N_MILLISECONDS(20){gHue++;}
 }
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Cap Sense
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Operation Variables
 uint8_t operationMode = 0;
@@ -383,241 +459,35 @@ OperationFunction operations[5] = {
   StrandTest2,              // 3 - another strandtest
   StrandTest3              // 4 - another strandtest
 };
-OperationFunction Operate = StrandTest;
+OperationFunction Operate = operations[0]; //StrandTest is default startup operation mode
 
+void readCapSenseInputs() {
+  int i;
 
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/*
- * Socket.IO Methods
- */
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-void connectSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("connected to server\n");
-  String stationId_str = String(stationId,DEC);
-  const char* stationId_char = stationId_str.c_str();
-  webSocket.emit("subscribe", stationId_char);
-  webSocket.emit("subscribe", "stations");
-  byte mac[6];
-  WiFi.macAddress(mac);
-  webSocket.emit("idhostnameipmac",
-  (stationId_str+","
-  +String(WiFi.hostname())+","
-  +String(WiFi.localIP())+","
-  +String(mac[5],HEX)+","
-  +String(mac[4],HEX)+","
-  +String(mac[3],HEX)+","
-  +String(mac[2],HEX)+","
-  +String(mac[1],HEX)+","
-  +String(mac[0],HEX)).c_str()
-  );
-}
-
-void clearSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got clear message\n");
-  fill_solid(leds,STATION_LED_COUNT, CRGB(0,0,0));
-  doRedraw = true;
-}
-
-void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
-  //USE_SERIAL.printf("got fillSolid message: %s\n", payload);
-  
-  unsigned int output_length = decode_base64_length((unsigned char*)payload);
-  unsigned char binPayload[output_length];
-  decode_base64((unsigned char*)payload, binPayload);
-
-  //startIndex
-  //numToFill,
-  //ledColor (r,g,b)
-  fill_solid(leds + (uint8_t)binPayload[0], (uint8_t)binPayload[1], CRGB((uint8_t)binPayload[2],(uint8_t)binPayload[3],(uint8_t)binPayload[4]));
-  
-  doRedraw = true;
-}
-
-void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
-  //USE_SERIAL.printf("got setColor message: %s\n", payload);
-  
-  unsigned int output_length = decode_base64_length((unsigned char*)payload);
-  unsigned char binPayload[output_length];
-  decode_base64((unsigned char*)payload, binPayload);
-
-  //startIndex
-  //ledColor (r,g,b)
-
-  int first = (uint8_t)binPayload[0];
-  leds[first].r = (uint8_t)binPayload[1];
-  leds[first].g = (uint8_t)binPayload[2];
-  leds[first].b = (uint8_t)binPayload[3];
-  
-  doRedraw = true;
-}
-
-void setColorsSocketEventHandler(const char * payload, size_t payloadLength) {
-  //USE_SERIAL.printf("got setColors message: %s\n", payload);
-  
-  unsigned int output_length = decode_base64_length((unsigned char*)payload);
-  unsigned char binPayload[output_length];
-  decode_base64((unsigned char*)payload, binPayload);
-
-  //startIndex
-  //colorArray[] (r,g,b)
-  int first = (uint8_t)binPayload[0];
-  int last = first+(output_length-1)/3;
-  for (int i = first; i < last; i++) {
-    leds[i].r = (uint8_t)binPayload[i*COLOR_BYTE_COUNT+0];
-    leds[i].g = (uint8_t)binPayload[i*COLOR_BYTE_COUNT+2];
-    leds[i].b = (uint8_t)binPayload[i*COLOR_BYTE_COUNT+1];
-  }
-  
-  doRedraw = true;
-}
-
-void setFivesSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got setFives message: %s\n", payload);
-  
-  unsigned int output_length = decode_base64_length((unsigned char*)payload);
-  
-  unsigned char binPayload[output_length];
-  decode_base64((unsigned char*)payload, binPayload);
-  
-  for (int i = 0; i < STATION_LED_COUNT; i++) {
-    leds[i].r = (uint8_t)binPayload[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+0];
-    leds[i].g = (uint8_t)binPayload[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+2];
-    leds[i].b = (uint8_t)binPayload[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+1];
-  }
-  
-  doRedraw = true;
-}
-
-void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got checkForUpdate message: %s\n", payload);
-  checkForUpdate();
-}
-
-void setModeSocketEventHandler(const char * payload, size_t payloadLength){
-  USE_SERIAL.printf("got setMode: %s\n", payload);
-  
-  unsigned int output_length = decode_base64_length((unsigned char*)payload);
-  
-  unsigned char binPayload[output_length];
-  decode_base64((unsigned char*)payload, binPayload);
-
-  operationMode = (uint8_t)binPayload[0];
-  Operate = operations[operationMode];
-}
-
-void setStationIdSocketEventHandler(const char * payload, size_t payloadLength){
-  USE_SERIAL.printf("got setStationId: %s\n", payload);
-  
-  unsigned int output_length = decode_base64_length((unsigned char*)payload);
-  
-  unsigned char binPayload[output_length];
-  decode_base64((unsigned char*)payload, binPayload);
-
-  stationId = binPayload[0]+binPayload[1]<<8;
-  EEPROM.begin(512);
-  EEPROMWriteInt(0, stationId);
-  EEPROM.commit();
-  EEPROM.end(); //also commits in addition to release from RAM copy
-}
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/*
- * OTA Updates
- */
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-void checkForUpdate(){
-  //t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100",80,"/update/base","1000");
-  t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100:80/update/base",baseVersion);
-   
-  switch(ret) {
-    case HTTP_UPDATE_FAILED:
-      USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-        break;
-        
-    case HTTP_UPDATE_NO_UPDATES:
-      USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
-        break;
-    
-    case HTTP_UPDATE_OK:
-      USE_SERIAL.println("HTTP_UPDATE_OK");
-        break;
+  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
+  MPR121.updateBaselineData();
+  MPR121.updateFilteredData();
+  cap_sum = 0;
+  for (i = 0; i < 12; i++) {    // 13 value pairs
+    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
+    Serial.print(cap_dev[i]);
+    Serial.print(" ");
+    if (cap_dev[i] > cap_threshold) {
+      cap_sum++;
     }
-}
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/*
- * EEPROM
- */
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-//http://forum.arduino.cc/index.php?topic=37470.0
-//This function will write a 2 byte integer to the eeprom at the specified address and address + 1
-void EEPROMWriteInt(int p_address, int p_value)
- {
-  byte lowByte = ((p_value >> 0) & 0xFF);
-  byte highByte = ((p_value >> 8) & 0xFF);
-  
-  EEPROM.write(p_address, lowByte);
-  EEPROM.write(p_address + 1, highByte);
- }
-
-//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
-unsigned int EEPROMReadInt(int p_address)
-{
-  byte lowByte = EEPROM.read(p_address);
-  byte highByte = EEPROM.read(p_address + 1);
-  
-  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/*
- * UDP Events
- */
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-//TODO: parse incoming UDP packets
-void udpEvent(){
-  int packetSize = udpSocket.parsePacket();
-  if(packetSize){
-    USE_SERIAL.printf("received packet of size %d",packetSize);
-    int len = udpSocket.read(packetBytes, STATION_BYTE_COUNT);
-    packetComplete = true;
-    memcpy(packetBytes,packetBytesBuffer,packetSize); //copy into buffer
   }
+  Serial.println();
 }
 
-
-
+void capSenseLEDUpdate() {
+  for (int i = 0; i < STATION_SEGMENTS; i++) {
+    CRGB STATION_COLOR = CHSV(STATION_HUE[i], STATION_SAT[i], STATION_BRI[i]);
+    for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
+      leds[i * SEGMENT_LED_COUNT + j] = STATION_COLOR;
+    }
+  }
+  doRedraw = true;
+}
 
 
 
@@ -625,8 +495,8 @@ void udpEvent(){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*
- * Setup
- */
+   Setup
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -638,7 +508,7 @@ void setup() {
   USE_SERIAL.begin(115200);
   Serial.setDebugOutput(true);
   USE_SERIAL.println("Booting up");
-  
+
   WiFi.mode(WIFI_OFF);
   WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
   delay(100);
@@ -646,7 +516,7 @@ void setup() {
   WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
   WiFi.begin(wifi_ssid, wifi_pass);
-  
+
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
@@ -654,7 +524,7 @@ void setup() {
   FastLED.setBrightness(max_brightness);
 
   //turn all LEDs off immediately
-  fill_solid(leds,STATION_LED_COUNT, CRGB(0,0,0));
+  fill_solid(leds, STATION_LED_COUNT, CRGB(0, 0, 0));
   redraw();
 
   EEPROM.begin(512);
@@ -670,12 +540,12 @@ void setup() {
     USE_SERIAL.flush();
     delay(1000);
   }
-  
+
   USE_SERIAL.printf("station id is %d\n", stationId);
   USE_SERIAL.printf("firmware version is %s\n", baseVersion);
 
-  
-  
+
+
   webSocket.on("connect", connectSocketEventHandler);
   webSocket.on("clear", clearSocketEventHandler);
   webSocket.on("fillSolid", fillSolidSocketEventHandler);
@@ -683,11 +553,53 @@ void setup() {
   webSocket.on("setColors", setColorsSocketEventHandler);
   webSocket.on("setFives", setFivesSocketEventHandler);
   webSocket.on("checkForUpdate", checkForUpdateSocketEventHandler);
-  webSocket.on("setMode",setModeSocketEventHandler);
-  webSocket.on("setStationId",setStationIdSocketEventHandler);
+  webSocket.on("setMode", setModeSocketEventHandler);
+  webSocket.on("setStationId", setStationIdSocketEventHandler);
   webSocket.begin(server_ip);
-  
+
   udpSocket.begin(udpPort);
+
+
+  //setup I2C
+  pinMode(PIN_SDA, OUTPUT);
+  pinMode(PIN_SCL, OUTPUT);
+  Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
+  Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
+  // 0x5C is the MPR121 I2C address on the Bare Touch Board
+  while (!MPR121.begin(0x5A)) {
+    Serial.println("error setting up MPR121");
+    switch (MPR121.getError()) {
+      case NO_ERROR:
+        Serial.println("no error");
+        break;
+      case ADDRESS_UNKNOWN:
+        Serial.println("incorrect address");
+        break;
+      case READBACK_FAIL:
+        Serial.println("readback failure");
+        break;
+      case OVERCURRENT_FLAG:
+        Serial.println("overcurrent on REXT pin");
+        break;
+      case OUT_OF_RANGE:
+        Serial.println("electrode out of range");
+        break;
+      case NOT_INITED:
+        Serial.println("not initialised");
+        break;
+      default:
+        Serial.println("unknown error");
+        break;
+    }
+    delay(100);
+  }
+
+  MPR121.setTouchThreshold(touchThreshold);
+  MPR121.setReleaseThreshold(releaseThreshold);
+
+  for (uint8_t i = 0; i < 12; i++) {
+    cap_dev[i] = 0;
+  }
 }
 
 
@@ -696,8 +608,265 @@ void setup() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*
- * Loop
- */
+   Operation Functions
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void StrandTest() {
+  // 0 - rainbow
+  fill_rainbow(leds, STATION_LED_COUNT, gHue, 7);
+  FastLED.show();
+  FastLED.delay(1000 / 120);
+  EVERY_N_MILLISECONDS(20) {
+    gHue++;
+  }
+}
+
+void SlaveListen() {
+  // 1 - listening
+}
+
+void CapSenseControl() {
+  // 2 - cap sense controller
+  readCapSenseInputs();
+
+  if (cap_dev[11] < cap_threshold) {
+    for (int j = 0; j < STATION_SEGMENTS; j++) {
+      if (STATION_BRI[j] < 1.0) {
+        STATION_BRI[j] = STATION_BRI[j] + BRI_STEP2;
+        STATION_BRI[j] = STATION_BRI[j] >= 1.0 ? 1.0 : STATION_BRI[j];
+        break;
+      }
+    }
+    capSenseLEDUpdate();
+  }
+  for (uint8_t i = 0; i < 12; i++) {
+    if (cap_dev[i] > cap_threshold) {
+      int bri_or_sat = i / 5;
+      int s = i - 5;
+      switch (bri_or_sat) {
+        case 0:
+          STATION_HUE[i] = (STATION_HUE[i] + HUE_STEP);
+          STATION_HUE[i] = STATION_HUE[i] > 1.0 ? STATION_HUE[i] - 1.0 : STATION_HUE[i];
+          break;
+        case 1:
+          STATION_SAT[s] = (STATION_SAT[s] + SAT_STEP[s]);
+          SAT_STEP[s] = STATION_SAT[s] >= 1.0 ? SAT_STEP[s] * -1 : STATION_SAT[s] <= 0.0 ? SAT_STEP[s] * -1 : SAT_STEP[s];
+          STATION_SAT[s] = STATION_SAT[s] >= 1.0 ? 1.0 : STATION_SAT[s] <= 0.0 ? 0.0 : STATION_SAT[s];
+          break;
+        default: //case 2
+          for (int j = STATION_SEGMENTS - 1; j >= 0; j--) {
+            if (STATION_BRI[j] > 0.0) {
+              STATION_BRI[j] = STATION_BRI[j] - BRI_STEP;
+              STATION_BRI[j] = STATION_BRI[j] <= 0.0 ? 0.0 : STATION_BRI[j];
+              break;
+            } else {
+              if (j == 0) {
+                for (int k = 0; k < STATION_SEGMENTS; k++) {
+                  STATION_SAT[k] = 1.0;
+                }
+              }
+            }
+          }
+          break;
+      }
+    }
+  }
+  capSenseLEDUpdate();
+}
+
+void StrandTest2() {
+  // 3 - sinelon
+  // a colored dot sweeping back and forth, with fading trails
+  fadeToBlackBy( leds, NUM_LEDS, 20);
+  int pos = beatsin16(13, 0, NUM_LEDS);
+  leds[pos] += CHSV( gHue, 255, 192);
+  FastLED.show();
+  FastLED.delay(1000 / 120);
+  EVERY_N_MILLISECONDS(20) {
+    gHue++;
+  }
+}
+
+void StrandTest3() {
+  // 4 - juggle
+  // eight colored dots, weaving in and out of sync with each other
+  fadeToBlackBy( leds, NUM_LEDS, 20);
+  byte dothue = 0;
+  for ( int i = 0; i < 8; i++) {
+    leds[beatsin16(i + 7, 0, NUM_LEDS)] |= CHSV(dothue, 200, 255);
+    dothue += 32;
+  }
+  FastLED.show();
+  FastLED.delay(1000 / 120);
+  EVERY_N_MILLISECONDS(20) {
+    gHue++;
+  }
+}
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Socket.IO Methods
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void connectSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("connected to server\n");
+  String stationId_str = String(stationId, DEC);
+  const char* stationId_char = stationId_str.c_str();
+  webSocket.emit("subscribe", stationId_char);
+  webSocket.emit("subscribe", "stations");
+  byte mac[6];
+  WiFi.macAddress(mac);
+  webSocket.emit("idhostnameipmac",
+                 (stationId_str + ","
+                  + String(WiFi.hostname()) + ","
+                  + String(WiFi.localIP()) + ","
+                  + String(mac[5], HEX) + ","
+                  + String(mac[4], HEX) + ","
+                  + String(mac[3], HEX) + ","
+                  + String(mac[2], HEX) + ","
+                  + String(mac[1], HEX) + ","
+                  + String(mac[0], HEX)).c_str()
+                );
+}
+
+void clearSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got clear message\n");
+  fill_solid(leds, STATION_LED_COUNT, CRGB(0, 0, 0));
+  doRedraw = true;
+}
+
+void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
+  //USE_SERIAL.printf("got fillSolid message: %s\n", payload);
+
+  unsigned int output_length = decode_base64_length((unsigned char*)payload);
+  unsigned char binPayload[output_length];
+  decode_base64((unsigned char*)payload, binPayload);
+
+  //startIndex
+  //numToFill,
+  //ledColor (r,g,b)
+  fill_solid(leds + (uint8_t)binPayload[0], (uint8_t)binPayload[1], CRGB((uint8_t)binPayload[2], (uint8_t)binPayload[3], (uint8_t)binPayload[4]));
+
+  doRedraw = true;
+}
+
+void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
+  //USE_SERIAL.printf("got setColor message: %s\n", payload);
+
+  unsigned int output_length = decode_base64_length((unsigned char*)payload);
+  unsigned char binPayload[output_length];
+  decode_base64((unsigned char*)payload, binPayload);
+
+  //startIndex
+  //ledColor (r,g,b)
+
+  int first = (uint8_t)binPayload[0];
+  leds[first].r = (uint8_t)binPayload[1];
+  leds[first].g = (uint8_t)binPayload[2];
+  leds[first].b = (uint8_t)binPayload[3];
+
+  doRedraw = true;
+}
+
+void setColorsSocketEventHandler(const char * payload, size_t payloadLength) {
+  //USE_SERIAL.printf("got setColors message: %s\n", payload);
+
+  unsigned int output_length = decode_base64_length((unsigned char*)payload);
+  unsigned char binPayload[output_length];
+  decode_base64((unsigned char*)payload, binPayload);
+
+  //startIndex
+  //colorArray[] (r,g,b)
+  int first = (uint8_t)binPayload[0];
+  int last = first + (output_length - 1) / 3;
+  for (int i = first; i < last; i++) {
+    leds[i].r = (uint8_t)binPayload[i * COLOR_BYTE_COUNT + 0];
+    leds[i].g = (uint8_t)binPayload[i * COLOR_BYTE_COUNT + 2];
+    leds[i].b = (uint8_t)binPayload[i * COLOR_BYTE_COUNT + 1];
+  }
+
+  doRedraw = true;
+}
+
+void setFivesSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got setFives message: %s\n", payload);
+
+  unsigned int output_length = decode_base64_length((unsigned char*)payload);
+
+  unsigned char binPayload[output_length];
+  decode_base64((unsigned char*)payload, binPayload);
+
+  for (int i = 0; i < STATION_LED_COUNT; i++) {
+    leds[i].r = (uint8_t)binPayload[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+    leds[i].g = (uint8_t)binPayload[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+    leds[i].b = (uint8_t)binPayload[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
+  }
+
+  doRedraw = true;
+}
+
+void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got checkForUpdate message: %s\n", payload);
+  checkForUpdate();
+}
+
+void setModeSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got setMode: %s\n", payload);
+
+  unsigned int output_length = decode_base64_length((unsigned char*)payload);
+
+  unsigned char binPayload[output_length];
+  decode_base64((unsigned char*)payload, binPayload);
+
+  operationMode = (uint8_t)binPayload[0];
+  Operate = operations[operationMode];
+}
+
+void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) {
+  USE_SERIAL.printf("got setStationId: %s\n", payload);
+
+  unsigned int output_length = decode_base64_length((unsigned char*)payload);
+
+  unsigned char binPayload[output_length];
+  decode_base64((unsigned char*)payload, binPayload);
+
+  stationId = binPayload[0] + binPayload[1] << 8;
+  EEPROM.begin(512);
+  EEPROMWriteInt(0, stationId);
+  EEPROM.commit();
+  EEPROM.end(); //also commits in addition to release from RAM copy
+}
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Loop
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -712,34 +881,34 @@ void loop() {
   if (packetComplete) {
 
     for (int i = 0; i < STATION_LED_COUNT; i++) {
-      leds[i].r = (uint8_t)packetBytesBuffer[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+0];
-      leds[i].g = (uint8_t)packetBytesBuffer[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+2];
-      leds[i].b = (uint8_t)packetBytesBuffer[(i/STATION_LED_SEGMENT_COUNT)*COLOR_BYTE_COUNT+1];
+      leds[i].r = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+      leds[i].g = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+      leds[i].b = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
     }
-//    if((int)packetBytesBuffer[0]==stationId){
-//      //startIndex
-//      //numToFill,
-//      //ledColor (r,g,b)
-//      fill_solid(leds + demap64[packetBytesBuffer[1]],
-//      demap64[packetBytesBuffer[2]],
-//      CRGB(
-//        demap64[packetBytesBuffer[3]],
-//        demap64[packetBytesBuffer[4]],
-//        demap64[packetBytesBuffer[5]]
-//        )
-//      );
-      //doRedraw = (bool)demap64[packetBytesBuffer[6]];
-//    }
+    //    if((int)packetBytesBuffer[0]==stationId){
+    //      //startIndex
+    //      //numToFill,
+    //      //ledColor (r,g,b)
+    //      fill_solid(leds + demap64[packetBytesBuffer[1]],
+    //      demap64[packetBytesBuffer[2]],
+    //      CRGB(
+    //        demap64[packetBytesBuffer[3]],
+    //        demap64[packetBytesBuffer[4]],
+    //        demap64[packetBytesBuffer[5]]
+    //        )
+    //      );
+    //doRedraw = (bool)demap64[packetBytesBuffer[6]];
+    //    }
     doRedraw = true;
     packetComplete = false;
   }
   //USE_SERIAL.printf("time:%u\n",millis());
-  
+
   Operate();
-  
+
   //check for firmware updates once every two minutes
-  EVERY_N_SECONDS(120){
-    if(WiFi.status()==WL_CONNECTED){
+  EVERY_N_SECONDS(120) {
+    if (WiFi.status() == WL_CONNECTED) {
       checkForUpdate();
     }
   }
