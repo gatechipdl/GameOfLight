@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1008";
+const char* baseVersion = "1009";
 
 #include <EEPROM.h>
 
@@ -481,7 +481,7 @@ void readCapSenseInputs() {
 
 void capSenseLEDUpdate() {
   for (int i = 0; i < STATION_SEGMENTS; i++) {
-    CRGB STATION_COLOR = CHSV(STATION_HUE[i], STATION_SAT[i], STATION_BRI[i]);
+    CRGB STATION_COLOR = CHSV(uint8_t(STATION_HUE[i]*255), uint8_t(STATION_SAT[i]*255), uint8_t(STATION_BRI[i]*255));
     for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
       leds[i * SEGMENT_LED_COUNT + j] = STATION_COLOR;
     }
@@ -883,9 +883,9 @@ void loop() {
   if (packetComplete) {
 
     for (int i = 0; i < STATION_LED_COUNT; i++) {
-      leds[i].r = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
-      leds[i].g = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
-      leds[i].b = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
+//      leds[i].r = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+//      leds[i].g = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+//      leds[i].b = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
     }
     //    if((int)packetBytesBuffer[0]==stationId){
     //      //startIndex
