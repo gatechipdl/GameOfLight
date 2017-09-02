@@ -1,0 +1,93 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<title>Light Orchard Tester</title>
+	<meta name="description" content="test controls for the Light Orchard installation">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <ul>
+        <li>
+            <button onclick="emitCheckForUpdates()">Force a Request to Check for Firmware Updates</button>
+        </li>
+        <li>
+            <button onclick="setMode(0);">Set Mode - Rainbow Strand Test</button>
+        </li>
+        <li>
+            <button onclick="setMode(1);">Set Mode - Slave Listener</button>
+            <ul>
+                <li>
+                    <button onclick="setFiveHueColors();">Set Five 'Random' Colors</button>
+                </li>
+                <li>
+                    <button onclick="clearColors();">Clear the Colors</button>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <button onclick="setMode(2);">Set Mode - CapSense Controller</button>
+        </li>
+        <li>
+            <button onclick="setMode(3);">Set Mode - Sinlon Strand Test</button>
+        </li>
+        <li>
+            <button onclick="setMode(4);">Set Mode - Jungle Strand Test</button>
+        </li>
+    </ul>
+</body>
+
+
+<script>
+    var socket = io.connect('/');
+    socket.on('connect', function(){
+        socket.emit('subscribe','browsers');
+    });
+    
+    function setMode(newMode){
+        console.log('setting new mode');
+        socket.emit('setModeRaw',newMode);
+    }
+    
+    function emitCheckForUpdates(){
+        socket.emit('checkForUpdates',"");
+    }
+    
+    function setFiveHueColors(){
+        socket.emit('setFiveHueColors',"");
+    }
+    
+    function clearColors(){
+        socket.emit('clearColors',"");
+    }
+</script>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
