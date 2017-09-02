@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1015";
+const char* baseVersion = "1016";
 
 #include <EEPROM.h>
 
@@ -24,8 +24,9 @@ const char* baseVersion = "1015";
 #include "base64.hpp"
 
 //https://github.com/FastLED/FastLED/wiki/Interrupt-problems
-//#define FASTLED_ALLOW_INTERRUPTS 0
+
 #define FASTLED_INTERRUPT_RETRY_COUNT 1
+#define FASTLED_ALLOW_INTERRUPTS 0
 #include "FastLED.h"
 FASTLED_USING_NAMESPACE
 
@@ -612,8 +613,8 @@ void setup() {
         break;
     }
   } else {
-    MPR121.setTouchThreshold(touchThreshold);
-    MPR121.setReleaseThreshold(releaseThreshold);
+    //MPR121.setTouchThreshold(touchThreshold);
+    //MPR121.setReleaseThreshold(releaseThreshold);
   }
 
   for (uint8_t i = 0; i < 12; i++) {
