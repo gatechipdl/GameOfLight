@@ -37,7 +37,7 @@ void updateStation() {
   for (int i = 0; i < STATION_SEGMENTS; i++) {
     //uint32_t STATION_COLOR = HSV_to_RGB(i);
     for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
-      leds[i].setHSV(int(STATION_HUE[i]*255), int(STATION_SAT[i]*255), int(STATION_BRI[i]*255));
+      leds[i*SEGMENT_LED_COUNT+j].setHSV(int(STATION_HUE[i]*255), int(STATION_SAT[i]*255), int(STATION_BRI[i]*255));
     }
   }
   FastLED.show();
