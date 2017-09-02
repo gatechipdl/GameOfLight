@@ -7,14 +7,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1010";
+const char* baseVersion = "1011";
 
 #include <EEPROM.h>
 
 #include <Arduino.h>
-
-#include <MPR121.h>
-#include <Wire.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -26,62 +23,49 @@ const char* baseVersion = "1010";
 #include <SocketIoClient.h>
 #include "base64.hpp"
 
-#define USE_SERIAL Serial
-
+//https://github.com/FastLED/FastLED/wiki/Interrupt-problems
+#define FASTLED_INTERRUPT_RETRY_COUNT 1
 #include "FastLED.h"
-
 FASTLED_USING_NAMESPACE
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001000)
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
 
-#define DATA_PIN    4
-//#define CLK_PIN   4
-#define LED_TYPE    WS2811
-#define COLOR_ORDER GRB
-#define NUM_LEDS   45
-CRGB leds[NUM_LEDS];
-uint8_t max_brightness = 255;
-
-#define STATION_LED_COUNT 45
-#define STATION_SEGMENT_COUNT 5
-#define STATION_LED_SEGMENT_COUNT 9
-
-//3 bytes of color, 5 segments, 36 stations = 540
-#define COLOR_BYTE_COUNT 3
-#define STATION_BYTE_COUNT 15
-
-#define PIN_SDA 14
-#define PIN_SCL 5
+#include <MPR121.h>
+#include <Wire.h>
 
 
-CRGB stationColors[STATION_SEGMENT_COUNT];
+
+#define LED_DATA_PIN          4
+#define LED_TYPE              WS2811
+#define LED_COLOR_ORDER       GRB
+#define LED_COUNT             45
+#define LED_SEGMENT_COUNT     5
+#define LED_PER_SEGMENT_COUNT 9
+// 3 bytes of color, 5 segments, 36 stations = 540 bytes
+#define COLOR_BYTE_COUNT      3
+#define STATION_BYTE_COUNT    15
+
+#define PIN_SDA               14
+#define PIN_SCL               5
+
 int stationId = 0; //need to pull from EEPROM asap
 
+// LED Variables
+CRGB leds[LED_COUNT];
+CRGB stationColors[LED_SEGMENT_COUNT];
+boolean doRedraw = true;
+uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+
+// WiFi Variables
+ESP8266WiFiMulti WiFiMulti;
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
 const char* server_ip = "192.168.0.100";
-
-//IPAddress udpMulticastServerIp(230, 185, 192, 109);
-//uint16_t udpMulticastServerPort = 60000;
-//uint16_t udpPort = 60000;
-
-
-boolean doRedraw = true;
-boolean doPrepareStationSegmentColors = false;
-uint8_t stationLedColorIndex[STATION_LED_COUNT];
-uint8_t currentLedIndex = 0;
-boolean doShowStrip = false;
-
-uint8_t gHue = 0; // rotating "base color" used by many of the patterns
-CRGB rgbval(50, 0, 250);
-
-
-ESP8266WiFiMulti WiFiMulti;
 SocketIoClient webSocket;
 
-// UDP variables
+// UDP Variables
 unsigned int udpPort = 60000;
 byte packetBytesBuffer[STATION_BYTE_COUNT];
 int packetBytesIndex = 0;
@@ -90,18 +74,14 @@ byte packetBytes[STATION_BYTE_COUNT];
 bool packetComplete = false;
 WiFiUDP udpSocket;
 
-// cap sense variables
-int const STATION_SEGMENTS = 5;
-int LED_COUNT = 45;
-int SEGMENT_LED_COUNT = 9;
-float STATION_HUE[STATION_SEGMENTS];
-float STATION_SAT[STATION_SEGMENTS];
-float HUE_STEP = 0.002;
-float SAT_STEP_MAG = 0.003;
-float SAT_STEP[STATION_SEGMENTS];
-float BRI_STEP = 0.03;
-float BRI_STEP2 = 0.007;
-float STATION_BRI[STATION_SEGMENTS];
+// CapSense Variables
+float segmentHues[LED_SEGMENT_COUNT];
+float segmentSats[LED_SEGMENT_COUNT];
+float hueStep = 0.002;
+float satSteps[LED_SEGMENT_COUNT];
+float briStep1 = 0.03;
+float briStep2 = 0.007;
+float segmentBris[LED_SEGMENT_COUNT];
 // this is the touch threshold - setting it low makes it more like a proximity trigger
 // default value is 40 for touch
 const int touchThreshold = 40;
@@ -112,6 +92,43 @@ int cap_dev[12];
 int cap_threshold = 2;
 int cap_sum = 0;
 
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Function Definitions
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+void redraw();
+void checkForUpdate();
+void EEPROMWriteInt(int p_address, int p_value);
+unsigned int EEPROMReadInt(int p_address);
+void udpEvent();
+void readCapSenseInputs();
+void capSenseLEDUpdate();
+void StrandTest();
+void SlaveListen();
+void CapSenseControl();
+void StrandTest2();
+void StrandTest3();
+void connectSocketEventHandler(const char * payload, size_t payloadLength);
+void clearSocketEventHandler(const char * payload, size_t payloadLength);
+void fillSolidSocketEventHandler(const char * payload, size_t payloadLength);
+void setColorSocketEventHandler(const char * payload, size_t payloadLength);
+void setColorsSocketEventHandler(const char * payload, size_t payloadLength);
+void setFivesSocketEventHandler(const char * payload, size_t payloadLength);
+void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength);
+void setModeSocketEventHandler(const char * payload, size_t payloadLength);
+void setStationIdSocketEventHandler(const char * payload, size_t payloadLength);
 
 
 
@@ -363,15 +380,15 @@ void checkForUpdate() {
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:
-      USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
       break;
 
     case HTTP_UPDATE_NO_UPDATES:
-      USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
+      Serial.println("HTTP_UPDATE_NO_UPDATES");
       break;
 
     case HTTP_UPDATE_OK:
-      USE_SERIAL.println("HTTP_UPDATE_OK");
+      Serial.println("HTTP_UPDATE_OK");
       break;
   }
 }
@@ -411,6 +428,8 @@ unsigned int EEPROMReadInt(int p_address)
 }
 
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -425,14 +444,12 @@ unsigned int EEPROMReadInt(int p_address)
 void udpEvent() {
   int packetSize = udpSocket.parsePacket();
   if (packetSize) {
-    USE_SERIAL.printf("received packet of size %d", packetSize);
+    Serial.printf("received packet of size %d", packetSize);
     int len = udpSocket.read(packetBytes, STATION_BYTE_COUNT);
     packetComplete = true;
     memcpy(packetBytes, packetBytesBuffer, packetSize); //copy into buffer
   }
 }
-
-
 
 
 
@@ -480,14 +497,15 @@ void readCapSenseInputs() {
 }
 
 void capSenseLEDUpdate() {
-  for (int i = 0; i < STATION_SEGMENTS; i++) {
-    CRGB STATION_COLOR = CHSV(uint8_t(STATION_HUE[i]*255), uint8_t(STATION_SAT[i]*255), uint8_t(STATION_BRI[i]*255));
-    for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
-      leds[i * SEGMENT_LED_COUNT + j] = STATION_COLOR;
+  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+    CRGB STATION_COLOR = CHSV(uint8_t(segmentHues[i]*255), uint8_t(segmentSats[i]*255), uint8_t(segmentBris[i]*255));
+    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
+      leds[i * LED_PER_SEGMENT_COUNT + j] = STATION_COLOR;
     }
   }
   doRedraw = true;
 }
+
 
 
 
@@ -505,9 +523,9 @@ void setup() {
 
   delay(100); // small delay for recovery
 
-  USE_SERIAL.begin(115200);
+  Serial.begin(115200);
   Serial.setDebugOutput(true);
-  USE_SERIAL.println("Booting up");
+  Serial.println("Booting up");
 
   WiFi.mode(WIFI_OFF);
   WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
@@ -518,31 +536,31 @@ void setup() {
   WiFi.begin(wifi_ssid, wifi_pass);
 
   // tell FastLED about the LED strip configuration
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection(TypicalLEDStrip);
 
   // set master brightness control
-  FastLED.setBrightness(max_brightness);
+  FastLED.setBrightness(255);
 
   //turn all LEDs off immediately
-  fill_solid(leds, STATION_LED_COUNT, CRGB(0, 0, 0));
+  fill_solid(leds, LED_COUNT, CRGB(0, 0, 0));
   redraw();
 
   EEPROM.begin(512);
   stationId = EEPROMReadInt(0);
   EEPROM.end();
 
-  USE_SERIAL.println();
-  USE_SERIAL.println();
-  USE_SERIAL.println();
+  Serial.println();
+  Serial.println();
+  Serial.println();
 
   for (uint8_t t = 4; t > 0; t--) {
-    USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
-    USE_SERIAL.flush();
+    Serial.printf("[SETUP] BOOT WAIT %d...\n", t);
+    Serial.flush();
     delay(1000);
   }
 
-  USE_SERIAL.printf("station id is %d\n", stationId);
-  USE_SERIAL.printf("firmware version is %s\n", baseVersion);
+  Serial.printf("station id is %d\n", stationId);
+  Serial.printf("firmware version is %s\n", baseVersion);
 
 
 
@@ -616,9 +634,12 @@ void setup() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+
 void StrandTest() {
   // 0 - rainbow
-  fill_rainbow(leds, STATION_LED_COUNT, gHue, 7);
+  fill_rainbow(leds, LED_COUNT, gHue, 7);
   FastLED.show();
   FastLED.delay(1000 / 120);
   EVERY_N_MILLISECONDS(20) {
@@ -635,10 +656,10 @@ void CapSenseControl() {
   readCapSenseInputs();
 
   if (cap_dev[11] < cap_threshold) {
-    for (int j = 0; j < STATION_SEGMENTS; j++) {
-      if (STATION_BRI[j] < 1.0) {
-        STATION_BRI[j] = STATION_BRI[j] + BRI_STEP2;
-        STATION_BRI[j] = STATION_BRI[j] >= 1.0 ? 1.0 : STATION_BRI[j];
+    for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
+      if (segmentBris[j] < 1.0) {
+        segmentBris[j] = segmentBris[j] + briStep2;
+        segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
         break;
       }
     }
@@ -650,24 +671,24 @@ void CapSenseControl() {
       int s = i - 5;
       switch (bri_or_sat) {
         case 0:
-          STATION_HUE[i] = (STATION_HUE[i] + HUE_STEP);
-          STATION_HUE[i] = STATION_HUE[i] > 1.0 ? STATION_HUE[i] - 1.0 : STATION_HUE[i];
+          segmentHues[i] = (segmentHues[i] + hueStep);
+          segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
           break;
         case 1:
-          STATION_SAT[s] = (STATION_SAT[s] + SAT_STEP[s]);
-          SAT_STEP[s] = STATION_SAT[s] >= 1.0 ? SAT_STEP[s] * -1 : STATION_SAT[s] <= 0.0 ? SAT_STEP[s] * -1 : SAT_STEP[s];
-          STATION_SAT[s] = STATION_SAT[s] >= 1.0 ? 1.0 : STATION_SAT[s] <= 0.0 ? 0.0 : STATION_SAT[s];
+          segmentSats[s] = (segmentSats[s] + satSteps[s]);
+          satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
+          segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
           break;
         default: //case 2
-          for (int j = STATION_SEGMENTS - 1; j >= 0; j--) {
-            if (STATION_BRI[j] > 0.0) {
-              STATION_BRI[j] = STATION_BRI[j] - BRI_STEP;
-              STATION_BRI[j] = STATION_BRI[j] <= 0.0 ? 0.0 : STATION_BRI[j];
+          for (int j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
+            if (segmentBris[j] > 0.0) {
+              segmentBris[j] = segmentBris[j] - briStep1;
+              segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
               break;
             } else {
               if (j == 0) {
-                for (int k = 0; k < STATION_SEGMENTS; k++) {
-                  STATION_SAT[k] = 1.0;
+                for (int k = 0; k < LED_SEGMENT_COUNT; k++) {
+                  segmentSats[k] = 1.0;
                 }
               }
             }
@@ -682,8 +703,8 @@ void CapSenseControl() {
 void StrandTest2() {
   // 3 - sinelon
   // a colored dot sweeping back and forth, with fading trails
-  fadeToBlackBy( leds, NUM_LEDS, 20);
-  int pos = beatsin16(13, 0, NUM_LEDS);
+  fadeToBlackBy( leds, LED_COUNT, 20);
+  int pos = beatsin16(13, 0, LED_COUNT);
   leds[pos] += CHSV( gHue, 255, 192);
   FastLED.show();
   FastLED.delay(1000 / 120);
@@ -695,10 +716,10 @@ void StrandTest2() {
 void StrandTest3() {
   // 4 - juggle
   // eight colored dots, weaving in and out of sync with each other
-  fadeToBlackBy( leds, NUM_LEDS, 20);
+  fadeToBlackBy( leds, LED_COUNT, 20);
   byte dothue = 0;
   for ( int i = 0; i < 8; i++) {
-    leds[beatsin16(i + 7, 0, NUM_LEDS)] |= CHSV(dothue, 200, 255);
+    leds[beatsin16(i + 7, 0, LED_COUNT)] |= CHSV(dothue, 200, 255);
     dothue += 32;
   }
   FastLED.show();
@@ -726,7 +747,7 @@ void StrandTest3() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void connectSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("connected to server\n");
+  Serial.printf("connected to server\n");
   String stationId_str = String(stationId, DEC);
   const char* stationId_char = stationId_str.c_str();
   webSocket.emit("subscribe", stationId_char);
@@ -747,13 +768,13 @@ void connectSocketEventHandler(const char * payload, size_t payloadLength) {
 }
 
 void clearSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got clear message\n");
-  fill_solid(leds, STATION_LED_COUNT, CRGB(0, 0, 0));
+  Serial.printf("got clear message\n");
+  fill_solid(leds, LED_COUNT, CRGB(0, 0, 0));
   doRedraw = true;
 }
 
 void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
-  //USE_SERIAL.printf("got fillSolid message: %s\n", payload);
+  //Serial.printf("got fillSolid message: %s\n", payload);
 
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
   unsigned char binPayload[output_length];
@@ -768,7 +789,7 @@ void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
 }
 
 void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
-  //USE_SERIAL.printf("got setColor message: %s\n", payload);
+  //Serial.printf("got setColor message: %s\n", payload);
 
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
   unsigned char binPayload[output_length];
@@ -786,7 +807,7 @@ void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
 }
 
 void setColorsSocketEventHandler(const char * payload, size_t payloadLength) {
-  //USE_SERIAL.printf("got setColors message: %s\n", payload);
+  //Serial.printf("got setColors message: %s\n", payload);
 
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
   unsigned char binPayload[output_length];
@@ -806,29 +827,29 @@ void setColorsSocketEventHandler(const char * payload, size_t payloadLength) {
 }
 
 void setFivesSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got setFives message: %s\n", payload);
+  Serial.printf("got setFives message: %s\n", payload);
 
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
 
   unsigned char binPayload[output_length];
   decode_base64((unsigned char*)payload, binPayload);
 
-  for (int i = 0; i < STATION_LED_COUNT; i++) {
-    leds[i].r = (uint8_t)binPayload[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
-    leds[i].g = (uint8_t)binPayload[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
-    leds[i].b = (uint8_t)binPayload[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
+  for (int i = 0; i < LED_COUNT; i++) {
+    leds[i].r = (uint8_t)binPayload[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+    leds[i].g = (uint8_t)binPayload[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+    leds[i].b = (uint8_t)binPayload[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
   }
 
   doRedraw = true;
 }
 
 void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got checkForUpdate message: %s\n", payload);
+  Serial.printf("got checkForUpdate message: %s\n", payload);
   checkForUpdate();
 }
 
 void setModeSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got setMode: %s\n", payload);
+  Serial.printf("got setMode: %s\n", payload);
 
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
 
@@ -840,7 +861,7 @@ void setModeSocketEventHandler(const char * payload, size_t payloadLength) {
 }
 
 void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) {
-  USE_SERIAL.printf("got setStationId: %s\n", payload);
+  Serial.printf("got setStationId: %s\n", payload);
 
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
 
@@ -853,7 +874,6 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) 
   EEPROM.commit();
   EEPROM.end(); //also commits in addition to release from RAM copy
 }
-
 
 
 
@@ -882,10 +902,10 @@ void loop() {
 
   if (packetComplete) {
 
-    for (int i = 0; i < STATION_LED_COUNT; i++) {
-//      leds[i].r = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
-//      leds[i].g = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
-//      leds[i].b = (uint8_t)packetBytesBuffer[(i / STATION_LED_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
+    for (int i = 0; i < LED_COUNT; i++) {
+//      leds[i].r = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+//      leds[i].g = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+//      leds[i].b = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
     }
     //    if((int)packetBytesBuffer[0]==stationId){
     //      //startIndex
@@ -904,7 +924,7 @@ void loop() {
     doRedraw = true;
     packetComplete = false;
   }
-  //USE_SERIAL.printf("time:%u\n",millis());
+  //Serial.printf("time:%u\n",millis());
 
   Operate();
 
