@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1013";
+const char* baseVersion = "1014";
 
 #include <EEPROM.h>
 
@@ -34,7 +34,7 @@ FASTLED_USING_NAMESPACE
 #endif
 
 #include <Wire.h>
-//#include <MPR121.h>
+#include <MPR121.h>
 
 
 
@@ -584,39 +584,39 @@ void setup() {
   pinMode(PIN_SCL, OUTPUT);
   Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
   Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
-//  // 0x5C is the MPR121 I2C address on the Bare Touch Board
-//  byte mpr121try = 0;
-//  while (!MPR121.begin(0x5A) && mpr121try<20) {
-//    Serial.println("error setting up MPR121");
-//    switch (MPR121.getError()) {
-//      case NO_ERROR:
-//        Serial.println("no error");
-//        break;
-//      case ADDRESS_UNKNOWN:
-//        Serial.println("incorrect address");
-//        break;
-//      case READBACK_FAIL:
-//        Serial.println("readback failure");
-//        break;
-//      case OVERCURRENT_FLAG:
-//        Serial.println("overcurrent on REXT pin");
-//        break;
-//      case OUT_OF_RANGE:
-//        Serial.println("electrode out of range");
-//        break;
-//      case NOT_INITED:
-//        Serial.println("not initialised");
-//        break;
-//      default:
-//        Serial.println("unknown error");
-//        break;
-//    }
-//    delay(100);
-//    mpr121try++;
-//  }
-//
-//  MPR121.setTouchThreshold(touchThreshold);
-//  MPR121.setReleaseThreshold(releaseThreshold);
+  // 0x5C is the MPR121 I2C address on the Bare Touch Board
+  byte mpr121try = 0;
+  while (!MPR121.begin(0x5A) && mpr121try<20) {
+    Serial.println("error setting up MPR121");
+    switch (MPR121.getError()) {
+      case NO_ERROR:
+        Serial.println("no error");
+        break;
+      case ADDRESS_UNKNOWN:
+        Serial.println("incorrect address");
+        break;
+      case READBACK_FAIL:
+        Serial.println("readback failure");
+        break;
+      case OVERCURRENT_FLAG:
+        Serial.println("overcurrent on REXT pin");
+        break;
+      case OUT_OF_RANGE:
+        Serial.println("electrode out of range");
+        break;
+      case NOT_INITED:
+        Serial.println("not initialised");
+        break;
+      default:
+        Serial.println("unknown error");
+        break;
+    }
+    delay(100);
+    mpr121try++;
+  }
+
+  MPR121.setTouchThreshold(touchThreshold);
+  MPR121.setReleaseThreshold(releaseThreshold);
 
   for (uint8_t i = 0; i < 12; i++) {
     cap_dev[i] = 0;
