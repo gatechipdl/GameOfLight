@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1012";
+const char* baseVersion = "1013";
 
 #include <EEPROM.h>
 
@@ -33,7 +33,7 @@ FASTLED_USING_NAMESPACE
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
 
-//#include <Wire.h>
+#include <Wire.h>
 //#include <MPR121.h>
 
 
@@ -582,8 +582,8 @@ void setup() {
   //setup I2C
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
-//  Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
-//  Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
+  Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
+  Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
 //  // 0x5C is the MPR121 I2C address on the Bare Touch Board
 //  byte mpr121try = 0;
 //  while (!MPR121.begin(0x5A) && mpr121try<20) {
