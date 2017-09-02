@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1009";
+const char* baseVersion = "1010";
 
 #include <EEPROM.h>
 
@@ -567,7 +567,7 @@ void setup() {
   Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
   // 0x5C is the MPR121 I2C address on the Bare Touch Board
   byte mpr121try = 0;
-  while (!MPR121.begin(0x5A) || mpr121try<20) {
+  while (!MPR121.begin(0x5A) && mpr121try<20) {
     Serial.println("error setting up MPR121");
     switch (MPR121.getError()) {
       case NO_ERROR:
