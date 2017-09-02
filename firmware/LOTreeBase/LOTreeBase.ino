@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1011";
+const char* baseVersion = "1012";
 
 #include <EEPROM.h>
 
@@ -24,6 +24,7 @@ const char* baseVersion = "1011";
 #include "base64.hpp"
 
 //https://github.com/FastLED/FastLED/wiki/Interrupt-problems
+//#define FASTLED_ALLOW_INTERRUPTS 0
 #define FASTLED_INTERRUPT_RETRY_COUNT 1
 #include "FastLED.h"
 FASTLED_USING_NAMESPACE
@@ -32,8 +33,8 @@ FASTLED_USING_NAMESPACE
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
 
-#include <MPR121.h>
-#include <Wire.h>
+//#include <Wire.h>
+//#include <MPR121.h>
 
 
 
@@ -113,8 +114,8 @@ void checkForUpdate();
 void EEPROMWriteInt(int p_address, int p_value);
 unsigned int EEPROMReadInt(int p_address);
 void udpEvent();
-void readCapSenseInputs();
-void capSenseLEDUpdate();
+//void readCapSenseInputs();
+//void capSenseLEDUpdate();
 void StrandTest();
 void SlaveListen();
 void CapSenseControl();
@@ -473,38 +474,38 @@ OperationFunction operations[5] = {
   StrandTest,              // 0 - rainbow
   SlaveListen,             // 1 - listening
   CapSenseControl,         // 2 - cap sense controller
-  StrandTest2,              // 3 - another strandtest
+  StrandTest2,             // 3 - another strandtest
   StrandTest3              // 4 - another strandtest
 };
-OperationFunction Operate = operations[0]; //StrandTest is default startup operation mode
+OperationFunction Operate = operations[operationMode]; //StrandTest is default startup operation mode
 
-void readCapSenseInputs() {
-  int i;
-
-  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
-  MPR121.updateBaselineData();
-  MPR121.updateFilteredData();
-  cap_sum = 0;
-  for (i = 0; i < 12; i++) {    // 13 value pairs
-    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
-    Serial.print(cap_dev[i]);
-    Serial.print(" ");
-    if (cap_dev[i] > cap_threshold) {
-      cap_sum++;
-    }
-  }
-  Serial.println();
-}
-
-void capSenseLEDUpdate() {
-  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
-    CRGB STATION_COLOR = CHSV(uint8_t(segmentHues[i]*255), uint8_t(segmentSats[i]*255), uint8_t(segmentBris[i]*255));
-    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
-      leds[i * LED_PER_SEGMENT_COUNT + j] = STATION_COLOR;
-    }
-  }
-  doRedraw = true;
-}
+//void readCapSenseInputs() {
+//  int i;
+//
+//  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
+//  MPR121.updateBaselineData();
+//  MPR121.updateFilteredData();
+//  cap_sum = 0;
+//  for (i = 0; i < 12; i++) {    // 13 value pairs
+//    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
+//    Serial.print(cap_dev[i]);
+//    Serial.print(" ");
+//    if (cap_dev[i] > cap_threshold) {
+//      cap_sum++;
+//    }
+//  }
+//  Serial.println();
+//}
+//
+//void capSenseLEDUpdate() {
+//  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+//    CRGB STATION_COLOR = CHSV(uint8_t(segmentHues[i]*255), uint8_t(segmentSats[i]*255), uint8_t(segmentBris[i]*255));
+//    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
+//      leds[i * LED_PER_SEGMENT_COUNT + j] = STATION_COLOR;
+//    }
+//  }
+//  doRedraw = true;
+//}
 
 
 
@@ -581,41 +582,41 @@ void setup() {
   //setup I2C
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
-  Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
-  Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
-  // 0x5C is the MPR121 I2C address on the Bare Touch Board
-  byte mpr121try = 0;
-  while (!MPR121.begin(0x5A) && mpr121try<20) {
-    Serial.println("error setting up MPR121");
-    switch (MPR121.getError()) {
-      case NO_ERROR:
-        Serial.println("no error");
-        break;
-      case ADDRESS_UNKNOWN:
-        Serial.println("incorrect address");
-        break;
-      case READBACK_FAIL:
-        Serial.println("readback failure");
-        break;
-      case OVERCURRENT_FLAG:
-        Serial.println("overcurrent on REXT pin");
-        break;
-      case OUT_OF_RANGE:
-        Serial.println("electrode out of range");
-        break;
-      case NOT_INITED:
-        Serial.println("not initialised");
-        break;
-      default:
-        Serial.println("unknown error");
-        break;
-    }
-    delay(100);
-    mpr121try++;
-  }
-
-  MPR121.setTouchThreshold(touchThreshold);
-  MPR121.setReleaseThreshold(releaseThreshold);
+//  Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
+//  Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
+//  // 0x5C is the MPR121 I2C address on the Bare Touch Board
+//  byte mpr121try = 0;
+//  while (!MPR121.begin(0x5A) && mpr121try<20) {
+//    Serial.println("error setting up MPR121");
+//    switch (MPR121.getError()) {
+//      case NO_ERROR:
+//        Serial.println("no error");
+//        break;
+//      case ADDRESS_UNKNOWN:
+//        Serial.println("incorrect address");
+//        break;
+//      case READBACK_FAIL:
+//        Serial.println("readback failure");
+//        break;
+//      case OVERCURRENT_FLAG:
+//        Serial.println("overcurrent on REXT pin");
+//        break;
+//      case OUT_OF_RANGE:
+//        Serial.println("electrode out of range");
+//        break;
+//      case NOT_INITED:
+//        Serial.println("not initialised");
+//        break;
+//      default:
+//        Serial.println("unknown error");
+//        break;
+//    }
+//    delay(100);
+//    mpr121try++;
+//  }
+//
+//  MPR121.setTouchThreshold(touchThreshold);
+//  MPR121.setReleaseThreshold(releaseThreshold);
 
   for (uint8_t i = 0; i < 12; i++) {
     cap_dev[i] = 0;
@@ -653,6 +654,7 @@ void SlaveListen() {
 
 void CapSenseControl() {
   // 2 - cap sense controller
+  /*
   readCapSenseInputs();
 
   if (cap_dev[11] < cap_threshold) {
@@ -698,6 +700,7 @@ void CapSenseControl() {
     }
   }
   capSenseLEDUpdate();
+  */
 }
 
 void StrandTest2() {
