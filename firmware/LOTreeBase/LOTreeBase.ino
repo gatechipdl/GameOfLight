@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1014";
+const char* baseVersion = "1015";
 
 #include <EEPROM.h>
 
@@ -585,8 +585,8 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
   Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
   // 0x5C is the MPR121 I2C address on the Bare Touch Board
-  byte mpr121try = 0;
-  while (!MPR121.begin(0x5A) && mpr121try<20) {
+  //MPR121.begin(0x5A);
+  if (!MPR121.begin(0x5A)) {
     Serial.println("error setting up MPR121");
     switch (MPR121.getError()) {
       case NO_ERROR:
@@ -611,12 +611,10 @@ void setup() {
         Serial.println("unknown error");
         break;
     }
-    delay(100);
-    mpr121try++;
+  } else {
+    MPR121.setTouchThreshold(touchThreshold);
+    MPR121.setReleaseThreshold(releaseThreshold);
   }
-
-  MPR121.setTouchThreshold(touchThreshold);
-  MPR121.setReleaseThreshold(releaseThreshold);
 
   for (uint8_t i = 0; i < 12; i++) {
     cap_dev[i] = 0;
@@ -655,9 +653,9 @@ void SlaveListen() {
 void CapSenseControl() {
   // 2 - cap sense controller
   /*
-  readCapSenseInputs();
+    readCapSenseInputs();
 
-  if (cap_dev[11] < cap_threshold) {
+    if (cap_dev[11] < cap_threshold) {
     for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
       if (segmentBris[j] < 1.0) {
         segmentBris[j] = segmentBris[j] + briStep2;
@@ -666,8 +664,8 @@ void CapSenseControl() {
       }
     }
     capSenseLEDUpdate();
-  }
-  for (uint8_t i = 0; i < 12; i++) {
+    }
+    for (uint8_t i = 0; i < 12; i++) {
     if (cap_dev[i] > cap_threshold) {
       int bri_or_sat = i / 5;
       int s = i - 5;
@@ -698,8 +696,8 @@ void CapSenseControl() {
           break;
       }
     }
-  }
-  capSenseLEDUpdate();
+    }
+    capSenseLEDUpdate();
   */
 }
 
@@ -906,9 +904,9 @@ void loop() {
   if (packetComplete) {
 
     for (int i = 0; i < LED_COUNT; i++) {
-//      leds[i].r = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
-//      leds[i].g = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
-//      leds[i].b = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
+      //      leds[i].r = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+      //      leds[i].g = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+      //      leds[i].b = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
     }
     //    if((int)packetBytesBuffer[0]==stationId){
     //      //startIndex
