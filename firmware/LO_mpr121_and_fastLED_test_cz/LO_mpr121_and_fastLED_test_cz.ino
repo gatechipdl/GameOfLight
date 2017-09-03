@@ -2,23 +2,26 @@
 #include <MPR121.h>
 #include <Wire.h>
 
-#define LED_PIN 4
+#define LED_DATA_PIN 4
 #define baudRate 57600
 #define LED_TYPE    WS2811
-#define COLOR_ORDER GRB
-#define NUM_LEDS    45
-CRGB leds[NUM_LEDS];
+#define LED_COLOR_ORDER GRB
+#define LED_COUNT    45
+#define LED_SEGMENT_COUNT 5
+#define LED_PER_SEGMENT_COUNT 9
 
-int const STATION_SEGMENTS = 5;
-int SEGMENT_LED_COUNT = 9;
-float STATION_HUE[STATION_SEGMENTS];
-float STATION_SAT[STATION_SEGMENTS];
-float HUE_STEP = 0.002;
-float SAT_STEP_MAG = 0.003;
-float SAT_STEP[STATION_SEGMENTS];
-float BRI_STEP = 0.03;
-float BRI_STEP2 = 0.007;
-float STATION_BRI[STATION_SEGMENTS];
+#define PIN_SDA 14
+#define PIN_SCL 5
+
+CRGB leds[LED_COUNT];
+float segmentHues[LED_SEGMENT_COUNT];
+float segmentSats[LED_SEGMENT_COUNT];
+float hueStep = 0.002;
+float satStepMag = 0.003;
+float satSteps[LED_SEGMENT_COUNT];
+float briStep1 = 0.03;
+float briStep2 = 0.007;
+float segmentBris[LED_SEGMENT_COUNT];
 
 // this is the touch threshold - setting it low makes it more like a proximity trigger
 // default value is 40 for touch
@@ -30,23 +33,22 @@ int cap_dev[12];
 int cap_threshold = 2;
 int cap_sum = 0;
 
-#define PIN_SDA 14
-#define PIN_SCL 5
 
-void updateStation() {
-  for (int i = 0; i < STATION_SEGMENTS; i++) {
+
+void capSenseLEDUpdate() {
+  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
     //uint32_t STATION_COLOR = HSV_to_RGB(i);
-    for (int j = 0; j < SEGMENT_LED_COUNT; j++) {
-      leds[i*SEGMENT_LED_COUNT+j].setHSV(int(STATION_HUE[i]*255), int(STATION_SAT[i]*255), int(STATION_BRI[i]*255));
+    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
+      leds[i*LED_PER_SEGMENT_COUNT+j].setHSV(int(segmentHues[i]*255), int(segmentSats[i]*255), int(segmentBris[i]*255));
     }
   }
   FastLED.show();
 }
 
 //uint32_t HSV_to_RGB(int index) {
-//  float hue = STATION_HUE[index];
-//  float sat = sqrt(STATION_SAT[index]);
-//  float bri = STATION_BRI[index];
+//  float hue = segmentHues[index];
+//  float sat = sqrt(segmentSats[index]);
+//  float bri = segmentBris[index];
 //  hue = hue * 6;
 //  int i = floor(hue);
 //  float v = bri;
@@ -89,7 +91,7 @@ void updateStation() {
 //  return strip.Color(r, g, b);
 //}
 
-void readRawInputs() {
+void readCapSenseInputs() {
   int i;
 
   if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
@@ -153,29 +155,29 @@ void setup() {
     cap_dev[i] = 0;
   }
 
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection( TypicalLEDStrip );
 
-  for (int i = 0; i < STATION_SEGMENTS; i++) {
-    STATION_HUE[i] = 0.5;
-    STATION_SAT[i] = 1.0;
-    STATION_BRI[i] = 1.0;
-    SAT_STEP[i] = SAT_STEP_MAG;
+  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+    segmentHues[i] = 0.5;
+    segmentSats[i] = 1.0;
+    segmentBris[i] = 1.0;
+    satSteps[i] = satStepMag;
   }
-  updateStation();
+  capSenseLEDUpdate();
 }
 
 void loop() {
-  readRawInputs();
+  readCapSenseInputs();
 
   if (cap_dev[11] < cap_threshold) {
-    for (int j = 0; j < STATION_SEGMENTS; j++) {
-      if (STATION_BRI[j] < 1.0) {
-        STATION_BRI[j] = STATION_BRI[j] + BRI_STEP2;
-        STATION_BRI[j] = STATION_BRI[j] >= 1.0 ? 1.0 : STATION_BRI[j];
+    for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
+      if (segmentBris[j] < 1.0) {
+        segmentBris[j] = segmentBris[j] + briStep2;
+        segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
         break;
       }
     }
-    updateStation();
+    capSenseLEDUpdate();
   }
   for (uint8_t i = 0; i < 12; i++) {
     if (cap_dev[i] > cap_threshold) {
@@ -183,24 +185,24 @@ void loop() {
       int s = i - 5;
       switch (bri_or_sat) {
         case 0:
-          STATION_HUE[i] = (STATION_HUE[i] + HUE_STEP);
-          STATION_HUE[i] = STATION_HUE[i] > 1.0 ? STATION_HUE[i] - 1.0 : STATION_HUE[i];
+          segmentHues[i] = (segmentHues[i] + hueStep);
+          segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
           break;
         case 1:
-          STATION_SAT[s] = (STATION_SAT[s] + SAT_STEP[s]);
-          SAT_STEP[s] = STATION_SAT[s] >= 1.0 ? SAT_STEP[s] * -1 : STATION_SAT[s] <= 0.0 ? SAT_STEP[s] * -1 : SAT_STEP[s];
-          STATION_SAT[s] = STATION_SAT[s] >= 1.0 ? 1.0 : STATION_SAT[s] <= 0.0 ? 0.0 : STATION_SAT[s];
+          segmentSats[s] = (segmentSats[s] + satSteps[s]);
+          satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
+          segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
           break;
         default: //case 2
-          for (int j = STATION_SEGMENTS - 1; j >= 0; j--) {
-            if (STATION_BRI[j] > 0.0) {
-              STATION_BRI[j] = STATION_BRI[j] - BRI_STEP;
-              STATION_BRI[j] = STATION_BRI[j] <= 0.0 ? 0.0 : STATION_BRI[j];
+          for (int j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
+            if (segmentBris[j] > 0.0) {
+              segmentBris[j] = segmentBris[j] - briStep1;
+              segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
               break;
             } else {
               if (j == 0) {
-                for (int k = 0; k < STATION_SEGMENTS; k++) {
-                  STATION_SAT[k] = 1.0;
+                for (int k = 0; k < LED_SEGMENT_COUNT; k++) {
+                  segmentSats[k] = 1.0;
                 }
               }
             }
@@ -210,7 +212,7 @@ void loop() {
     }
   }
 
-  updateStation();
+  capSenseLEDUpdate();
 }
 
 

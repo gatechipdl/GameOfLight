@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1016";
+const char* baseVersion = "1017";
 
 #include <EEPROM.h>
 
@@ -34,9 +34,8 @@ FASTLED_USING_NAMESPACE
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
 
-#include <Wire.h>
 #include <MPR121.h>
-
+#include <Wire.h>
 
 
 #define LED_DATA_PIN          4
@@ -80,10 +79,12 @@ WiFiUDP udpSocket;
 float segmentHues[LED_SEGMENT_COUNT];
 float segmentSats[LED_SEGMENT_COUNT];
 float hueStep = 0.002;
+float satStepMag = 0.003;
 float satSteps[LED_SEGMENT_COUNT];
 float briStep1 = 0.03;
 float briStep2 = 0.007;
 float segmentBris[LED_SEGMENT_COUNT];
+
 // this is the touch threshold - setting it low makes it more like a proximity trigger
 // default value is 40 for touch
 const int touchThreshold = 40;
@@ -109,14 +110,15 @@ int cap_sum = 0;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
+void chunkedDelay(int ms, int chunkSize);
 void redraw();
 void checkForUpdate();
 void EEPROMWriteInt(int p_address, int p_value);
 unsigned int EEPROMReadInt(int p_address);
 void udpEvent();
-//void readCapSenseInputs();
-//void capSenseLEDUpdate();
+void readCapSenseInputs();
+void capSenseLEDUpdate();
+void PostSetupInitialization();
 void StrandTest();
 void SlaveListen();
 void CapSenseControl();
@@ -131,8 +133,6 @@ void setFivesSocketEventHandler(const char * payload, size_t payloadLength);
 void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength);
 void setModeSocketEventHandler(const char * payload, size_t payloadLength);
 void setStationIdSocketEventHandler(const char * payload, size_t payloadLength);
-
-
 
 
 
@@ -347,6 +347,29 @@ const uint8_t demap64[128] = {
 
 
 
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Helper Functions
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void chunkedDelay(int ms = 1000, int chunkSize = 10) {
+  ////https://github.com/esp8266/Arduino/issues/34
+  int chunks = ms / chunkSize;
+  for (int i = 0; i < chunks; i++) {
+    delay(chunkSize);
+  }
+}
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -361,8 +384,6 @@ void redraw() {
   FastLED.show();
   doRedraw = false;
 }
-
-
 
 
 
@@ -478,35 +499,35 @@ OperationFunction operations[5] = {
   StrandTest2,             // 3 - another strandtest
   StrandTest3              // 4 - another strandtest
 };
-OperationFunction Operate = operations[operationMode]; //StrandTest is default startup operation mode
+OperationFunction Operate = PostSetupInitialization; //default startup operation mode
 
-//void readCapSenseInputs() {
-//  int i;
-//
-//  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
-//  MPR121.updateBaselineData();
-//  MPR121.updateFilteredData();
-//  cap_sum = 0;
-//  for (i = 0; i < 12; i++) {    // 13 value pairs
-//    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
-//    Serial.print(cap_dev[i]);
-//    Serial.print(" ");
-//    if (cap_dev[i] > cap_threshold) {
-//      cap_sum++;
-//    }
-//  }
-//  Serial.println();
-//}
-//
-//void capSenseLEDUpdate() {
-//  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
-//    CRGB STATION_COLOR = CHSV(uint8_t(segmentHues[i]*255), uint8_t(segmentSats[i]*255), uint8_t(segmentBris[i]*255));
-//    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
-//      leds[i * LED_PER_SEGMENT_COUNT + j] = STATION_COLOR;
-//    }
-//  }
-//  doRedraw = true;
-//}
+void readCapSenseInputs() {
+  int i;
+
+  if (MPR121.touchStatusChanged()) MPR121.updateTouchData();
+  MPR121.updateBaselineData();
+  MPR121.updateFilteredData();
+  cap_sum = 0;
+  for (i = 0; i < 12; i++) {    // 13 value pairs
+    cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
+    Serial.print(cap_dev[i]);
+    Serial.print(" ");
+    if (cap_dev[i] > cap_threshold) {
+      cap_sum++;
+    }
+  }
+  Serial.println();
+}
+
+void capSenseLEDUpdate() {
+  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+    //uint32_t STATION_COLOR = HSV_to_RGB(i);
+    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
+      leds[i * LED_PER_SEGMENT_COUNT + j].setHSV(int(segmentHues[i] * 255), int(segmentSats[i] * 255), int(segmentBris[i] * 255));
+    }
+  }
+  doRedraw = true; //will call FastLED.show();
+}
 
 
 
@@ -522,8 +543,9 @@ OperationFunction Operate = operations[operationMode]; //StrandTest is default s
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
+  //should be less than 1 second in total or hardware watchdog timer might reset the mcu
 
-  delay(100); // small delay for recovery
+  delay(10); // small delay for recovery
 
   Serial.begin(115200);
   Serial.setDebugOutput(true);
@@ -531,40 +553,11 @@ void setup() {
 
   WiFi.mode(WIFI_OFF);
   WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
-  delay(100);
+  chunkedDelay(100);
   WiFi.mode(WIFI_STA);
   WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
   WiFi.begin(wifi_ssid, wifi_pass);
-
-  // tell FastLED about the LED strip configuration
-  FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection(TypicalLEDStrip);
-
-  // set master brightness control
-  FastLED.setBrightness(255);
-
-  //turn all LEDs off immediately
-  fill_solid(leds, LED_COUNT, CRGB(0, 0, 0));
-  redraw();
-
-  EEPROM.begin(512);
-  stationId = EEPROMReadInt(0);
-  EEPROM.end();
-
-  Serial.println();
-  Serial.println();
-  Serial.println();
-
-  for (uint8_t t = 4; t > 0; t--) {
-    Serial.printf("[SETUP] BOOT WAIT %d...\n", t);
-    Serial.flush();
-    delay(1000);
-  }
-
-  Serial.printf("station id is %d\n", stationId);
-  Serial.printf("firmware version is %s\n", baseVersion);
-
-
 
   webSocket.on("connect", connectSocketEventHandler);
   webSocket.on("clear", clearSocketEventHandler);
@@ -580,14 +573,73 @@ void setup() {
   udpSocket.begin(udpPort);
 
 
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Operation Functions
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+void PostSetupInitialization() {
+  //do initialization after the Setup, but in the first loop here
+  //then switch the next loop to call the different operation mode of 0
+
+
+
+  EEPROM.begin(512);
+  stationId = EEPROMReadInt(0);
+  EEPROM.end();
+
+  Serial.println();
+  Serial.println();
+  Serial.println();
+
+  for (uint8_t t = 4; t > 0; t--) {
+    Serial.printf("[SETUP] BOOT WAIT %d...\n", t);
+    Serial.flush();
+    //https://github.com/esp8266/Arduino/issues/34
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 10; j++) {
+        delay(10);
+      }
+      ESP.wdtFeed(); //software watchdog; no way to control hardware watchdog
+    }
+  }
+
+  Serial.printf("station id is %d\n", stationId);
+  Serial.printf("firmware version is %s\n", baseVersion);
+
+  Serial.printf("setting up LEDs and setting to black");
+  // tell FastLED about the LED strip configuration
+  FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(255);// set master brightness control
+  fill_solid(leds, LED_COUNT, CRGB(0, 0, 0));//turn all LEDs off immediately
+  redraw();
+
+
+
   //setup I2C
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
   Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
   Wire.setClockStretchLimit(1500); //https://github.com/esp8266/Arduino/issues/2607
+  //Wire.setClock(100000L);
+  chunkedDelay(100);
+
+
   // 0x5C is the MPR121 I2C address on the Bare Touch Board
-  //MPR121.begin(0x5A);
-  if (!MPR121.begin(0x5A)) {
+  int mpr121try = 0;
+  bool mpr121active = true;
+  while (!MPR121.begin(0x5A) && mpr121try < 20) {
     Serial.println("error setting up MPR121");
     switch (MPR121.getError()) {
       case NO_ERROR:
@@ -612,30 +664,29 @@ void setup() {
         Serial.println("unknown error");
         break;
     }
-  } else {
-    //MPR121.setTouchThreshold(touchThreshold);
-    //MPR121.setReleaseThreshold(releaseThreshold);
+    chunkedDelay(100);
+    mpr121try++;
   }
+
+  MPR121.setTouchThreshold(touchThreshold);
+  MPR121.setReleaseThreshold(releaseThreshold);
 
   for (uint8_t i = 0; i < 12; i++) {
     cap_dev[i] = 0;
   }
+
+  for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+    segmentHues[i] = 0.5;
+    segmentSats[i] = 1.0;
+    segmentBris[i] = 1.0;
+    satSteps[i] = satStepMag;
+  }
+
+
+
+  //change next loop to StrandTest
+  Operate = operations[operationMode];
 }
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-   Operation Functions
-*/
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 void StrandTest() {
   // 0 - rainbow
@@ -653,10 +704,9 @@ void SlaveListen() {
 
 void CapSenseControl() {
   // 2 - cap sense controller
-  /*
-    readCapSenseInputs();
+  readCapSenseInputs();
 
-    if (cap_dev[11] < cap_threshold) {
+  if (cap_dev[11] < cap_threshold) {
     for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
       if (segmentBris[j] < 1.0) {
         segmentBris[j] = segmentBris[j] + briStep2;
@@ -665,8 +715,8 @@ void CapSenseControl() {
       }
     }
     capSenseLEDUpdate();
-    }
-    for (uint8_t i = 0; i < 12; i++) {
+  }
+  for (uint8_t i = 0; i < 12; i++) {
     if (cap_dev[i] > cap_threshold) {
       int bri_or_sat = i / 5;
       int s = i - 5;
@@ -697,9 +747,9 @@ void CapSenseControl() {
           break;
       }
     }
-    }
-    capSenseLEDUpdate();
-  */
+  }
+
+  capSenseLEDUpdate();
 }
 
 void StrandTest2() {
