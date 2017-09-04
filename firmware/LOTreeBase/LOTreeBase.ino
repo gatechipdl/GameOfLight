@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1019";
+const char* baseVersion = "1020";
 
 #include <EEPROM.h>
 
@@ -60,7 +60,7 @@ boolean doRedraw = true;
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
 // WiFi Variables
-ESP8266WiFiMulti WiFiMulti;
+//ESP8266WiFiMulti WiFiMulti;
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
 const char* server_ip = "192.168.0.100";
@@ -562,16 +562,16 @@ void setup() {
 
   webSocket.on("connect", connectSocketEventHandler);
   webSocket.on("clear", clearSocketEventHandler);
-  webSocket.on("fillSolid", fillSolidSocketEventHandler);
-  webSocket.on("setColor", setColorSocketEventHandler);
-  webSocket.on("setColors", setColorsSocketEventHandler);
-  webSocket.on("setFives", setFivesSocketEventHandler);
+//  webSocket.on("fillSolid", fillSolidSocketEventHandler);
+//  webSocket.on("setColor", setColorSocketEventHandler);
+//  webSocket.on("setColors", setColorsSocketEventHandler);
+//  webSocket.on("setFives", setFivesSocketEventHandler);
   webSocket.on("checkForUpdate", checkForUpdateSocketEventHandler);
   webSocket.on("setMode", setModeSocketEventHandler);
   webSocket.on("setStationId", setStationIdSocketEventHandler);
   webSocket.begin(server_ip);
 
-  udpSocket.begin(udpPort);
+//  udpSocket.begin(udpPort);
 
 
 }
@@ -827,7 +827,7 @@ void connectSocketEventHandler(const char * payload, size_t payloadLength) {
 void clearSocketEventHandler(const char * payload, size_t payloadLength) {
   Serial.printf("got clear message\n");
   fill_solid(leds, LED_COUNT, CRGB(0, 0, 0));
-  doRedraw = true;
+  FastLED.show();//doRedraw = true;
 }
 
 void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
@@ -842,7 +842,7 @@ void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
   //ledColor (r,g,b)
   fill_solid(leds + (uint8_t)binPayload[0], (uint8_t)binPayload[1], CRGB((uint8_t)binPayload[2], (uint8_t)binPayload[3], (uint8_t)binPayload[4]));
 
-  doRedraw = true;
+  FastLED.show();//doRedraw = true;
 }
 
 void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
@@ -860,7 +860,7 @@ void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
   leds[first].g = (uint8_t)binPayload[2];
   leds[first].b = (uint8_t)binPayload[3];
 
-  doRedraw = true;
+  FastLED.show();//doRedraw = true;
 }
 
 void setColorsSocketEventHandler(const char * payload, size_t payloadLength) {
@@ -880,7 +880,7 @@ void setColorsSocketEventHandler(const char * payload, size_t payloadLength) {
     leds[i].b = (uint8_t)binPayload[i * COLOR_BYTE_COUNT + 1];
   }
 
-  doRedraw = true;
+  FastLED.show();//doRedraw = true;
 }
 
 void setFivesSocketEventHandler(const char * payload, size_t payloadLength) {
@@ -897,7 +897,7 @@ void setFivesSocketEventHandler(const char * payload, size_t payloadLength) {
     leds[i].b = (uint8_t)binPayload[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
   }
 
-  doRedraw = true;
+  FastLED.show();//doRedraw = true;
 }
 
 void checkForUpdateSocketEventHandler(const char * payload, size_t payloadLength) {
@@ -952,45 +952,45 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) 
 
 void loop() {
   webSocket.loop();
-  udpEvent();
-  if (doRedraw) {
-    redraw();
-  }
+//  udpEvent();
+//  if (doRedraw) {
+//    redraw();
+//  }
 
-  if (packetComplete) {
-
-    for (int i = 0; i < LED_COUNT; i++) {
-      //      leds[i].r = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
-      //      leds[i].g = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
-      //      leds[i].b = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
-    }
-    //    if((int)packetBytesBuffer[0]==stationId){
-    //      //startIndex
-    //      //numToFill,
-    //      //ledColor (r,g,b)
-    //      fill_solid(leds + demap64[packetBytesBuffer[1]],
-    //      demap64[packetBytesBuffer[2]],
-    //      CRGB(
-    //        demap64[packetBytesBuffer[3]],
-    //        demap64[packetBytesBuffer[4]],
-    //        demap64[packetBytesBuffer[5]]
-    //        )
-    //      );
-    //doRedraw = (bool)demap64[packetBytesBuffer[6]];
-    //    }
-    doRedraw = true;
-    packetComplete = false;
-  }
-  //Serial.printf("time:%u\n",millis());
+//  if (packetComplete) {
+//
+//    for (int i = 0; i < LED_COUNT; i++) {
+//      //      leds[i].r = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0];
+//      //      leds[i].g = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2];
+//      //      leds[i].b = (uint8_t)packetBytesBuffer[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1];
+//    }
+//    //    if((int)packetBytesBuffer[0]==stationId){
+//    //      //startIndex
+//    //      //numToFill,
+//    //      //ledColor (r,g,b)
+//    //      fill_solid(leds + demap64[packetBytesBuffer[1]],
+//    //      demap64[packetBytesBuffer[2]],
+//    //      CRGB(
+//    //        demap64[packetBytesBuffer[3]],
+//    //        demap64[packetBytesBuffer[4]],
+//    //        demap64[packetBytesBuffer[5]]
+//    //        )
+//    //      );
+//    //doRedraw = (bool)demap64[packetBytesBuffer[6]];
+//    //    }
+//    doRedraw = true;
+//    packetComplete = false;
+//  }
+//  //Serial.printf("time:%u\n",millis());
 
   Operate();
 
-  //check for firmware updates once every two minutes
-  EVERY_N_SECONDS(120) {
-    if (WiFi.status() == WL_CONNECTED) {
-      checkForUpdate();
-    }
-  }
+//  //check for firmware updates once every two minutes
+//  EVERY_N_SECONDS(120) {
+//    if (WiFi.status() == WL_CONNECTED) {
+//      checkForUpdate();
+//    }
+//  }
 }
 
 

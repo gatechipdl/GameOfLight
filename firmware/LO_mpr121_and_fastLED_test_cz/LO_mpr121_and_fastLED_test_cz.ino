@@ -1,7 +1,10 @@
+#include <EEPROM.h>
+#include <ESP8266WiFi.h>
 #include <FastLED.h>
 #include <MPR121.h>
 #include <Wire.h>
-#include <ESP8266WiFi.h>
+
+
 
 #define LED_DATA_PIN 4
 #define baudRate 115200
@@ -112,6 +115,15 @@ void readCapSenseInputs() {
   Serial.println();
 }
 
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+unsigned int EEPROMReadInt(int p_address)
+{
+  byte lowByte = EEPROM.read(p_address);
+  byte highByte = EEPROM.read(p_address + 1);
+
+  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+}
+
 void setup() {
   Serial.begin(baudRate);
   Serial.setDebugOutput(true);
@@ -177,6 +189,12 @@ void setup() {
     satSteps[i] = satStepMag;
   }
   capSenseLEDUpdate();
+
+  EEPROM.begin(512);
+  int stationId = EEPROMReadInt(0);
+  Serial.print("stationId is: ");
+  Serial.println(stationId);
+  EEPROM.end();
 }
 
 void loop() {
