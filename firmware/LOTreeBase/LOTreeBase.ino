@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1018";
+const char* baseVersion = "1019";
 
 #include <EEPROM.h>
 
@@ -686,10 +686,11 @@ void PostSetupInitialization() {
     satSteps[i] = satStepMag;
   }
   
-  Serial.printf("Switching to StrandTest1 operation mode\n");
+  //Serial.printf("Switching to StrandTest1 operation mode\n");
+  Serial.printf("Switching to CapSenseControl operation mode\n");
 
   //change next loop to StrandTest
-  Operate = operations[operationMode];
+  Operate = CapSenseControl;//operations[operationMode];
 }
 
 void StrandTest() {
