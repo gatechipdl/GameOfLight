@@ -1,9 +1,10 @@
 #include <FastLED.h>
 #include <MPR121.h>
 #include <Wire.h>
+#include <ESP8266WiFi.h>
 
 #define LED_DATA_PIN 4
-#define baudRate 57600
+#define baudRate 115200
 #define LED_TYPE    WS2811
 #define LED_COLOR_ORDER GRB
 #define LED_COUNT    45
@@ -33,7 +34,9 @@ int cap_dev[12];
 int cap_threshold = 2;
 int cap_sum = 0;
 
-
+const char* wifi_ssid     = "Orchard";
+const char* wifi_pass = "";
+const char* server_ip = "192.168.0.100";
 
 void capSenseLEDUpdate() {
   for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
@@ -111,6 +114,16 @@ void readCapSenseInputs() {
 
 void setup() {
   Serial.begin(baudRate);
+  Serial.setDebugOutput(true);
+  Serial.println("Booting up");
+
+  WiFi.mode(WIFI_OFF);
+  WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
+  delay(100);
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoConnect(true);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(wifi_ssid, wifi_pass);
 
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
