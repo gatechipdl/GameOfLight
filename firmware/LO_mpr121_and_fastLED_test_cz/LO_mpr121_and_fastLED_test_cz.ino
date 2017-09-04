@@ -3,7 +3,8 @@
 #include <FastLED.h>
 #include <MPR121.h>
 #include <Wire.h>
-
+#include <ESP8266HTTPClient.h>
+#include <ESP8266httpUpdate.h>
 
 
 #define LED_DATA_PIN 4
@@ -16,6 +17,8 @@
 
 #define PIN_SDA 14
 #define PIN_SCL 5
+
+const char* baseVersion = "3001";
 
 CRGB leds[LED_COUNT];
 float segmentHues[LED_SEGMENT_COUNT];
@@ -51,51 +54,24 @@ void capSenseLEDUpdate() {
   FastLED.show();
 }
 
-//uint32_t HSV_to_RGB(int index) {
-//  float hue = segmentHues[index];
-//  float sat = sqrt(segmentSats[index]);
-//  float bri = segmentBris[index];
-//  hue = hue * 6;
-//  int i = floor(hue);
-//  float v = bri;
-//  float f = hue - i;
-//  float p = bri * (1 - sat);
-//  float q = bri * (1 - sat * f);
-//  float t = bri * (1 - sat * (1 - f));
-//  byte r, g, b;
-//  switch (i) {
-//    case 0:
-//      r = round(255 * v);
-//      g = round(255 * t);
-//      b = round(255 * p);
-//      break;
-//    case 1:
-//      r = round(255 * q);
-//      g = round(255 * v);
-//      b = round(255 * p);
-//      break;
-//    case 2:
-//      r = round(255 * p);
-//      g = round(255 * v);
-//      b = round(255 * t);
-//      break;
-//    case 3:
-//      r = round(255 * p);
-//      g = round(255 * q);
-//      b = round(255 * v);
-//      break;
-//    case 4:
-//      r = round(255 * t);
-//      g = round(255 * p);
-//      b = round(255 * v);
-//      break;
-//    default: // case 5:
-//      r = round(255 * v);
-//      g = round(255 * p);
-//      b = round(255 * q);
-//  }
-//  return strip.Color(r, g, b);
-//}
+void checkForUpdate() {
+  Serial.printf("checking for firmware update\n");
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100:80/update/base", baseVersion);
+
+  switch (ret) {
+    case HTTP_UPDATE_FAILED:
+      Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      break;
+
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("HTTP_UPDATE_NO_UPDATES");
+      break;
+
+    case HTTP_UPDATE_OK:
+      Serial.println("HTTP_UPDATE_OK");
+      break;
+  }
+}
 
 void readCapSenseInputs() {
   int i;
@@ -181,6 +157,7 @@ void setup() {
   }
 
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection( TypicalLEDStrip );
+  checkForUpdate();
 
   for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
     segmentHues[i] = 0.5;
@@ -244,6 +221,13 @@ void loop() {
   }
 
   capSenseLEDUpdate();
+
+  //check for firmware updates once every two minutes
+  EVERY_N_SECONDS(120) {
+    if (WiFi.status() == WL_CONNECTED) {
+      checkForUpdate();
+    }
+  }
 }
 
 
