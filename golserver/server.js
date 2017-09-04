@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 1017;
+const baseVersion = 1018;
 
 const express = require('express');
 const app = express();
@@ -30,7 +30,7 @@ app.get('/update/base',function(req,res){
     console.log('a device is requesting an update');
     console.dir(req.headers);
     if(parseInt(req.headers['x-esp8266-version'])!=baseVersion){ //could be <
-        var full_path = path.join(__dirname,'/bin/base'+baseVersion'.bin');
+        var full_path = path.join(__dirname,'/bin/base'+baseVersion+'.bin');
         fs.readFile(full_path,"binary",function(err,file){
             if(err){
                 console.log('error uploading new firmware');

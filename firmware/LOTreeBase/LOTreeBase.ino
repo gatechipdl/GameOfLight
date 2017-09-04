@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "1017";
+const char* baseVersion = "1018";
 
 #include <EEPROM.h>
 
@@ -25,8 +25,8 @@ const char* baseVersion = "1017";
 
 //https://github.com/FastLED/FastLED/wiki/Interrupt-problems
 
-#define FASTLED_INTERRUPT_RETRY_COUNT 1
-#define FASTLED_ALLOW_INTERRUPTS 0
+//#define FASTLED_INTERRUPT_RETRY_COUNT 1
+//#define FASTLED_ALLOW_INTERRUPTS 0
 #include "FastLED.h"
 FASTLED_USING_NAMESPACE
 
@@ -526,7 +526,8 @@ void capSenseLEDUpdate() {
       leds[i * LED_PER_SEGMENT_COUNT + j].setHSV(int(segmentHues[i] * 255), int(segmentSats[i] * 255), int(segmentBris[i] * 255));
     }
   }
-  doRedraw = true; //will call FastLED.show();
+  //doRedraw = true; //will call FastLED.show();
+  FastLED.show();
 }
 
 
@@ -618,16 +619,18 @@ void PostSetupInitialization() {
   Serial.printf("station id is %d\n", stationId);
   Serial.printf("firmware version is %s\n", baseVersion);
 
-  Serial.printf("setting up LEDs and setting to black");
+  Serial.printf("setting up LEDs and setting to black\n");
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection(TypicalLEDStrip);
-  FastLED.setBrightness(255);// set master brightness control
+  //FastLED.setBrightness(255);// set master brightness control
   fill_solid(leds, LED_COUNT, CRGB(0, 0, 0));//turn all LEDs off immediately
-  redraw();
+  //redraw();
+  FastLED.show();
 
 
 
   //setup I2C
+  Serial.printf("setting up MPR121 on I2C\n");
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
   Wire.begin(PIN_SDA, PIN_SCL); //SDA SCL
@@ -664,6 +667,7 @@ void PostSetupInitialization() {
         Serial.println("unknown error");
         break;
     }
+    Serial.printf("done with setup the MPR121\n");
     chunkedDelay(100);
     mpr121try++;
   }
@@ -681,8 +685,8 @@ void PostSetupInitialization() {
     segmentBris[i] = 1.0;
     satSteps[i] = satStepMag;
   }
-
-
+  
+  Serial.printf("Switching to StrandTest1 operation mode\n");
 
   //change next loop to StrandTest
   Operate = operations[operationMode];
