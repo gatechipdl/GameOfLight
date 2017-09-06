@@ -537,7 +537,7 @@ var doStuff4 = function(){
     hue = (hue+10)%hueBase;
     console.log(hue);
     var t_hue = hue;
-    t_hue = (hue+10)%hueBase;
+    t_hue = (hue+1)%hueBase;
     fiveColors[0] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
     t_hue = (hue+20)%hueBase;
     fiveColors[1] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
@@ -559,5 +559,5 @@ var doStuff4 = function(){
     io.sockets.emit('setFives',data64);
 }
 //setInterval(doStuff2,100000/60);
-//setInterval(doStuff4,1000/60);
+//setInterval(doStuff4,1000/30);
 setInterval(CheckForUpdate,100000);

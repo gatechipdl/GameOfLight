@@ -61,6 +61,14 @@
                     <button onclick="setFiveHueColors();">Set Five 'Random' Colors</button>
                 </li>
                 <li>
+                    <button onclick="toggleFiveHueColors();">Toggle Five 'Random' Colors</button>
+                </li>
+                <li>
+                    <label for="fps">FPS</label>
+                    <input id="fps" type="range" min="1" value="30" max="120" step="1" oninput="setFPS(value)">
+                    <div id="fpsval"></div>
+                </li>
+                <li>
                     <button onclick="clearColors();">Clear the Colors</button>
                 </li>
                 <li>
@@ -87,6 +95,8 @@
     var randBool = false;
     var counter = 0;
     var whiteRippleInterval, randomInterval;
+    var fps = 30;
+    
     socket.on('connect', function(){
         socket.emit('subscribe','browsers');
     });
@@ -100,8 +110,31 @@
         socket.emit('checkForUpdates',"");
     }
     
+    
     function setFiveHueColors(){
         socket.emit('setFiveHueColors',"");
+    }
+    
+    var hueIntervalId;
+    var isHueing = false;
+    function toggleFiveHueColors(){
+        if(isHueing){
+            clearInterval(hueIntervalId);
+            isHueing = false;
+        }
+        else{
+            hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+            isHueing = true;
+        }
+    }
+    
+    function setFPS(newFPS){
+        fps = newFPS;
+        document.getElementById("fpsval").innerHTML = fps+' fps';
+        if(isHueing){
+            clearInterval(hueIntervalId);
+            hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+        }
     }
     
     function clearColors(){
