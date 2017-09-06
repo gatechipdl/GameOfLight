@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-const char* baseVersion = "2001";
+const char* baseVersion = "2003";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -572,7 +572,7 @@ void setup() {
 
 //  udpSocket.begin(udpPort);
 */
-
+  PostSetupInitialization();
 }
 
 
@@ -983,7 +983,8 @@ void loop() {
 //  }
 //  //Serial.printf("time:%u\n",millis());
 
-  Operate();
+  //Operate();
+  CapSenseControl();
 
   //check for firmware updates once every two minutes
   EVERY_N_SECONDS(120) {

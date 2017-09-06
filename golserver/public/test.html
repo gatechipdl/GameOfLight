@@ -7,6 +7,43 @@
 	<title>Light Orchard Tester</title>
 	<meta name="description" content="test controls for the Light Orchard installation">
     <script src="/socket.io/socket.io.js"></script>
+    
+    <style>
+        
+        body {
+            font-family: monospace;
+            color: white;
+            font-size: 15px;
+            background: black;
+            letter-spacing: 0.1em;
+            //background: url(images/Game%20of%20Light_stubbins.jpg);
+            background-size: cover;
+            background-position: top center;
+        }
+        
+        li {
+            list-style: none;
+        }
+        
+        button {
+            font-family: inherit;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.25em;
+            color: white;
+            margin: 0 0 0.75em 0;
+            cursor: pointer;
+            font-size: inherit;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        button:active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+    </style>
 </head>
 
 <body>
@@ -26,6 +63,9 @@
                 <li>
                     <button onclick="clearColors();">Clear the Colors</button>
                 </li>
+                <li>
+                    <button onclick="whiteRipple();">white ripple</button>
+                </li>
             </ul>
         </li>
         <li>
@@ -43,6 +83,10 @@
 
 <script>
     var socket = io.connect('/');
+    var whiteBool = false;
+    var randBool = false;
+    var counter = 0;
+    var whiteRippleInterval, randomInterval;
     socket.on('connect', function(){
         socket.emit('subscribe','browsers');
     });
@@ -62,6 +106,18 @@
     
     function clearColors(){
         socket.emit('clearColors',"");
+    }
+    function whiteRipple(){
+        whiteBool = !whiteBool;
+        if (whiteBool) {
+            whiteRippleInterval = setInterval(emitWhiteRipple,20);
+        } else {
+            clearInterval(whiteRippleInterval);
+        }
+    }
+    function emitWhiteRipple() {
+        socket.emit('whiteRipple', counter);
+        counter=counter+0.2;
     }
 </script>
 

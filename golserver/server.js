@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 2001;
+const baseVersion = 3005;
 
 const express = require('express');
 const app = express();
@@ -525,11 +525,39 @@ var doStuff3 = function(){
     fiveColors[2] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     fiveColors[3] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     fiveColors[4] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
-    //SetFiveColors('allStations',fiveColors);
+    SetFiveColors('stations',fiveColors);
     
     console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
     udpSendColors();
 }
+
+
+var doStuff4 = function(){
+    fiveColors = new Array(5).fill(new CRGB(0,0,0));
+    hue = (hue+10)%hueBase;
+    console.log(hue);
+    var t_hue = hue;
+    t_hue = (hue+10)%hueBase;
+    fiveColors[0] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+    t_hue = (hue+20)%hueBase;
+    fiveColors[1] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+    t_hue = (hue+30)%hueBase;
+    fiveColors[2] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+    t_hue = (hue+40)%hueBase;
+    fiveColors[3] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+    t_hue = (hue+50)%hueBase;
+    fiveColors[4] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+
+    var dataBuffer = new Uint8Array([
+        fiveColors[0].r,fiveColors[0].g,fiveColors[0].b,
+        fiveColors[1].r,fiveColors[1].g,fiveColors[1].b,
+        fiveColors[2].r,fiveColors[2].g,fiveColors[2].b,
+        fiveColors[3].r,fiveColors[3].g,fiveColors[3].b,
+        fiveColors[4].r,fiveColors[4].g,fiveColors[4].b
+    ]);
+    var data64 = base64js.fromByteArray(dataBuffer);
+    io.sockets.emit('setFives',data64);
+}
 //setInterval(doStuff2,100000/60);
-//setInterval(doStuff3,100000/60);
+//setInterval(doStuff4,1000/60);
 setInterval(CheckForUpdate,100000);
