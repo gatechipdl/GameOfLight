@@ -101,6 +101,10 @@
         socket.emit('subscribe','browsers');
     });
     
+    socket.on('capSense', function(data){
+        console.dir(data);
+    });
+    
     function setMode(newMode){
         console.log('setting new mode');
         socket.emit('setModeRaw',newMode);

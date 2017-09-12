@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3005;
+const baseVersion = 3006;
 
 const express = require('express');
 const app = express();
@@ -136,7 +136,7 @@ function updateStationData(data){
 
 function stationDataListener(socket){
     socket.on('idhostnameipmac',function(data){
-        //TODO: parse the pieces and keep in a managed list
+        //parse the pieces and keep in a managed list
         console.log('idhostnameipmac');
         console.log(data);
         //parse and add to managed list
@@ -220,18 +220,11 @@ function checkForUpdateListener(socket){
     });
 }
 
-
-
-
-
-
-
-//var configFile = fs.readFileSync('./databaseTest.json');
-//var config = JSON.parse(configFile);
-//config.push({"totalTapScore": totTap, "tileId": tileId, "timeStamp": time});
-////console.log(' db now is, ', config)
-//var configJSON = JSON.stringify(config);
-//fs.writeFileSync('./databaseTest.json', configJSON);
+function saveStationDataListener(socket){
+    socket.on('saveStationData',function(data){
+        saveStationData();
+    });
+}
 
 //stations = [
 //    ESP_1089E5	60-01-94-10-89-E5	192.168.0.102	01:09:16
@@ -269,7 +262,26 @@ function checkForUpdateListener(socket){
 //34	ESP_107FB3	60-01-94-10-7F-B3
 
 
-
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   CapSense
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+function capsenseListener(socket){
+    socket.on('capSense',function(data){
+        var cData = data.split(","); //station, cap, state
+        var nData = {
+            'stationId':cData[0],
+            'capsenseId':cData[1],
+            'state':cData[2]
+        }
+        io.sockets.to('browsers').emit('capSense',nData);
+    });
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -327,6 +339,36 @@ function setFiveHueColorsListener(socket){
         io.sockets.emit('setFives',data64);
     });
 }
+
+function setFiveColorsListener(socket){
+    socket.on('setFiveColors',function(data){
+        /*
+        {
+        socketId:'asdf',
+        colors:[
+        [255,255,255],
+        [255,255,255],
+        [255,255,255],
+        [255,255,255],
+        [255,255,255]
+        ]
+        }
+        */
+        fiveColors = data['colors'];
+        
+        var dataBuffer = new Uint8Array([
+            fiveColors[0][0],fiveColors[0][1],fiveColors[0][2],
+            fiveColors[1][0],fiveColors[1][1],fiveColors[1][2],
+            fiveColors[2][0],fiveColors[2][1],fiveColors[2][2],
+            fiveColors[3][0],fiveColors[3][1],fiveColors[3][2],
+            fiveColors[4][0],fiveColors[4][1],fiveColors[4][2]
+        ]);
+        
+        var data64 = base64js.fromByteArray(dataBuffer);
+        io.sockets.to(data['socketId']).emit('setFives',data64);
+    });
+}
+
 
 function clearColorsListener(socket){
     socket.on('clearColors',function(){{
@@ -469,15 +511,26 @@ io.on('connection',function(socket){
     //ClearAll();
 
     stationDataListener(socket);
-
+    
+    socket.on('subscribeStation',function(roomName){
+        socket.join(roomName);
+        socket.join('stations');
+        
+        var tAddress = socket.handshake.address;
+        var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
+        console.log("station client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
+        
+        CheckForUpdate(roomName);
+        RequestStationInfo(socket['id']);
+        
+        
+    });
+        
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
         
-        //console.dir(socket.handshake.address);
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
-        //console.log(idx);
-        
         console.log("client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
 
         clientSockets[socket['id']] = {
@@ -492,22 +545,22 @@ io.on('connection',function(socket){
                 }
             }
         });
-
-        if(roomName=='stations'){
-            CheckForUpdate(roomName);    
-        }
-
+        
         if(roomName=='browsers'){
             socket.emit('syncStationData',stationData);
-
+            
+            //for manager.html
             setStationIdListener(socket);
             setStationModeListener(socket);
             pingStationListener(socket);
             checkForUpdateListener(socket);
-
+            saveStationDataListener(socket);
+            
+            //for test.html
             setModeRawListener(socket);
             checkForUpdatesListener(socket);
             setFiveHueColorsListener(socket);
+            setFiveColorsListener(socket);
             clearColorsListener(socket);
         }
     });
@@ -680,6 +733,13 @@ function SetStrip(stationId,colorArray){
  */
 function CheckForUpdate(stationId){
     io.sockets.to(stationId).emit('checkForUpdate',"");
+}
+
+/*
+ *
+ */
+function RequestStationInfo(socketId){
+    io.sockets.to(socketId).emit('getInfo',"");
 }
 
 /*

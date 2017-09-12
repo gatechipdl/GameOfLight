@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3005";
+const char* baseVersion = "3006";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -53,6 +53,8 @@ const int releaseThreshold = 20;
 int cap_dev[12];
 int cap_threshold = 2;
 int cap_sum = 0;
+bool cap_last[12]; //last state
+bool cap_curr[12]; //curr state
 
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
@@ -166,7 +168,8 @@ void CapSenseControl() {
     capSenseLEDUpdate();
   }
   for (uint8_t i = 0; i < 12; i++) {
-    if (cap_dev[i] > cap_threshold) {
+    cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
+    if (cap_curr[i]) {
       int bri_or_sat = i / 5;
       int s = i - 5;
       switch (bri_or_sat) {
@@ -196,6 +199,21 @@ void CapSenseControl() {
           break;
       }
     }
+
+    //if there was a state change
+    if(cap_curr[i]!=cap_last[i]){
+      //send the stationId, the id of the cap sensor, and the current state to which it changed
+      webSocket.emit("capSense",(String(stationId, DEC)+","+String(i,DEC)+","+String(cap_curr[i],DEC)).c_str());
+      if(cap_curr[i]>cap_last[i]){
+        //change was from touched to released
+      }else
+      {
+        //change was from released to touched
+        
+      }
+    }
+    
+    cap_last[i] = cap_curr[i]; //reset cap_last
   }
 
   capSenseLEDUpdate();
@@ -237,8 +255,12 @@ void connectSocketEventHandler(const char * payload, size_t payloadLength) {
   Serial.printf("connected to server\n");
   String stationId_str = String(stationId, DEC);
   const char* stationId_char = stationId_str.c_str();
-  webSocket.emit("subscribe", stationId_char);
-  webSocket.emit("subscribe", "stations");
+  webSocket.emit("subscribeStation", stationId_char);
+}
+
+void getInfoSocketEventHandler(const char * payload, size_t payloadLength) {
+  Serial.printf("got getInfo message\n");
+  String stationId_str = String(stationId, DEC);
   byte mac[6];
   WiFi.macAddress(mac);
   webSocket.emit("idhostnameipmac",
@@ -438,6 +460,7 @@ void setup() {
   WiFi.begin(wifi_ssid, wifi_pass);
   
   webSocket.on("connect", connectSocketEventHandler);
+  webSocket.on("getInfo", getInfoSocketEventHandler);
   webSocket.on("clear", clearSocketEventHandler);
   webSocket.on("fillSolid", fillSolidSocketEventHandler);
   webSocket.on("setColor", setColorSocketEventHandler);
@@ -489,6 +512,8 @@ void setup() {
 
   for (uint8_t i = 0; i < 12; i++) {
     cap_dev[i] = 0;
+    cap_last[i] = 0; //released
+    cap_curr[i] = 0; //released
   }
 
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, LED_COLOR_ORDER>(leds, LED_COUNT).setCorrection( TypicalLEDStrip );
