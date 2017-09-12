@@ -2,161 +2,202 @@
 
 <html lang="en">
 
-<head>
-	<meta charset="utf-8">
-	<title>Light Orchard Tester</title>
-	<meta name="description" content="test controls for the Light Orchard installation">
-    <script src="/socket.io/socket.io.js"></script>
-    
-    <style>
-        
-        body {
-            font-family: monospace;
-            color: white;
-            font-size: 15px;
-            background: black;
-            letter-spacing: 0.1em;
-            //background: url(images/Game%20of%20Light_stubbins.jpg);
-            background-size: cover;
-            background-position: top center;
-        }
-        
-        li {
-            list-style: none;
-        }
-        
-        button {
-            font-family: inherit;
-            border: none;
-            background: rgba(255, 255, 255, 0.15);
-            padding: 0.25em;
-            color: white;
-            margin: 0 0 0.75em 0;
-            cursor: pointer;
-            font-size: inherit;
-        }
-        
-        button:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
-        button:active {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        
-    </style>
-</head>
+    <head>
+        <meta charset="utf-8">
+        <title>Light Orchard Tester</title>
+        <meta name="description" content="test controls for the Light Orchard installation">
+        <script src="/socket.io/socket.io.js"></script>
 
-<body>
-    <ul>
-        <li>
-            <button onclick="emitCheckForUpdates()">Force a Request to Check for Firmware Updates</button>
-        </li>
-        <li>
-            <button onclick="setMode(0);">Set Mode - Rainbow Strand Test</button>
-        </li>
-        <li>
-            <button onclick="setMode(1);">Set Mode - Slave Listener</button>
-            <ul>
-                <li>
-                    <button onclick="setFiveHueColors();">Set Five 'Random' Colors</button>
-                </li>
-                <li>
-                    <button onclick="toggleFiveHueColors();">Toggle Five 'Random' Colors</button>
-                </li>
-                <li>
-                    <label for="fps">FPS</label>
-                    <input id="fps" type="range" min="1" value="30" max="120" step="1" oninput="setFPS(value)">
-                    <div id="fpsval"></div>
-                </li>
-                <li>
-                    <button onclick="clearColors();">Clear the Colors</button>
-                </li>
-                <li>
-                    <button onclick="whiteRipple();">white ripple</button>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <button onclick="setMode(2);">Set Mode - CapSense Controller</button>
-        </li>
-        <li>
-            <button onclick="setMode(3);">Set Mode - Sinlon Strand Test</button>
-        </li>
-        <li>
-            <button onclick="setMode(4);">Set Mode - Jungle Strand Test</button>
-        </li>
-    </ul>
-</body>
+        <style>
+
+            body {
+                font-family: monospace;
+                color: white;
+                font-size: 15px;
+                background: black;
+                letter-spacing: 0.1em;
+                //background: url(images/Game%20of%20Light_stubbins.jpg);
+                background-size: cover;
+                background-position: top center;
+            }
+
+            li {
+                list-style: none;
+            }
+
+            button {
+                font-family: inherit;
+                border: none;
+                background: rgba(255, 255, 255, 0.15);
+                padding: 0.25em;
+                color: white;
+                margin: 0 0 0.75em 0;
+                cursor: pointer;
+                font-size: inherit;
+            }
+
+            button:hover {
+                background: rgba(255, 255, 255, 0.25);
+            }
+            button:active {
+                background: rgba(255, 255, 255, 0.5);
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <ul>
+            <li>
+                <button onclick="emitCheckForUpdates()">Force a Request to Check for Firmware Updates</button>
+            </li>
+            <li>
+                <button onclick="setMode(0);">Set Mode - Rainbow Strand Test</button>
+            </li>
+            <li>
+                <button onclick="setMode(1);">Set Mode - Slave Listener</button>
+                <ul>
+                    <li>
+                        <button onclick="setFiveHueColors();">Set Five 'Random' Colors</button>
+                    </li>
+                    <li>
+                        <button onclick="toggleFiveHueColors();">Toggle Five 'Random' Colors</button>
+                    </li>
+                    <li>
+                        <label for="fps">FPS</label>
+                        <input id="fps" type="range" min="1" value="30" max="120" step="1" oninput="setFPS(value)">
+                        <div id="fpsval"></div>
+                    </li>
+                    <li>
+                        <button onclick="clearColors();">Clear the Colors</button>
+                    </li>
+                    <li>
+                        <button onclick="whiteRipple();">white ripple</button>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <button onclick="setMode(2);">Set Mode - CapSense Controller</button>
+            </li>
+            <li>
+                <button onclick="setMode(3);">Set Mode - Sinlon Strand Test</button>
+            </li>
+            <li>
+                <button onclick="setMode(4);">Set Mode - Jungle Strand Test</button>
+            </li>
+            <li>
+                <div>
+                    <input type="number" value="0" min="0", max="32767" id="fiveColorStationId">
+                    <input type="color" id="color1">
+                    <input type="color" id="color2">
+                    <input type="color" id="color3">
+                    <input type="color" id="color4">
+                    <input type="color" id="color5">
+                    <input type="button" value="send five colors" onclick="submitFiveColors()">
+                </div>
+            </li>
+        </ul>
+    </body>
 
 
-<script>
-    var socket = io.connect('/');
-    var whiteBool = false;
-    var randBool = false;
-    var counter = 0;
-    var whiteRippleInterval, randomInterval;
-    var fps = 30;
-    
-    socket.on('connect', function(){
-        socket.emit('subscribe','browsers');
-    });
-    
-    socket.on('capSense', function(data){
-        console.dir(data);
-    });
-    
-    function setMode(newMode){
-        console.log('setting new mode');
-        socket.emit('setModeRaw',newMode);
-    }
-    
-    function emitCheckForUpdates(){
-        socket.emit('checkForUpdates',"");
-    }
-    
-    
-    function setFiveHueColors(){
-        socket.emit('setFiveHueColors',"");
-    }
-    
-    var hueIntervalId;
-    var isHueing = false;
-    function toggleFiveHueColors(){
-        if(isHueing){
-            clearInterval(hueIntervalId);
-            isHueing = false;
+    <script>
+        var socket = io.connect('/');
+        var whiteBool = false;
+        var randBool = false;
+        var counter = 0;
+        var whiteRippleInterval, randomInterval;
+        var fps = 30;
+
+        socket.on('connect', function(){
+            socket.emit('subscribe','browsers');
+        });
+
+        socket.on('capSense', function(data){
+            console.dir(data);
+        });
+
+        function setMode(newMode){
+            console.log('setting new mode');
+            socket.emit('setModeRaw',newMode);
         }
-        else{
-            hueIntervalId = setInterval(setFiveHueColors,1000/fps);
-            isHueing = true;
+
+        function emitCheckForUpdates(){
+            socket.emit('checkForUpdates',"");
         }
-    }
-    
-    function setFPS(newFPS){
-        fps = newFPS;
-        document.getElementById("fpsval").innerHTML = fps+' fps';
-        if(isHueing){
-            clearInterval(hueIntervalId);
-            hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+
+
+        function setFiveHueColors(){
+            socket.emit('setFiveHueColors',"");
         }
-    }
-    
-    function clearColors(){
-        socket.emit('clearColors',"");
-    }
-    function whiteRipple(){
-        whiteBool = !whiteBool;
-        if (whiteBool) {
-            whiteRippleInterval = setInterval(emitWhiteRipple,20);
-        } else {
-            clearInterval(whiteRippleInterval);
+        
+        //https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
         }
-    }
-    function emitWhiteRipple() {
-        socket.emit('whiteRipple', counter);
-        counter=counter+0.2;
-    }
-</script>
+
+        function submitFiveColors(){
+            var jData = {};
+            jData["stationId"] = document.getElementById("fiveColorStationId").value
+            
+            var tColor;
+            jData["colors"] = [];
+            tColor = hexToRgb(document.getElementById("color1").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color2").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color3").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color4").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color5").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            console.dir(jData);
+            socket.emit('setFiveColors',jData);
+        }
+
+        var hueIntervalId;
+        var isHueing = false;
+        function toggleFiveHueColors(){
+            if(isHueing){
+                clearInterval(hueIntervalId);
+                isHueing = false;
+            }
+            else{
+                hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+                isHueing = true;
+            }
+        }
+
+        function setFPS(newFPS){
+            fps = newFPS;
+            document.getElementById("fpsval").innerHTML = fps+' fps';
+            if(isHueing){
+                clearInterval(hueIntervalId);
+                hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+            }
+        }
+
+        function clearColors(){
+            socket.emit('clearColors',"");
+        }
+        function whiteRipple(){
+            whiteBool = !whiteBool;
+            if (whiteBool) {
+                whiteRippleInterval = setInterval(emitWhiteRipple,20);
+            } else {
+                clearInterval(whiteRippleInterval);
+            }
+        }
+        function emitWhiteRipple() {
+            socket.emit('whiteRipple', counter);
+            counter=counter+0.2;
+        }
+    </script>
 
 </html>
 

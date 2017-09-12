@@ -342,6 +342,7 @@ function setFiveHueColorsListener(socket){
 
 function setFiveColorsListener(socket){
     socket.on('setFiveColors',function(data){
+        console.dir(data);
         /*
         {
         socketId:'asdf',
@@ -523,6 +524,8 @@ io.on('connection',function(socket){
         CheckForUpdate(roomName);
         RequestStationInfo(socket['id']);
         
+        capsenseListener(socket);
+        
         
     });
         
@@ -555,6 +558,7 @@ io.on('connection',function(socket){
             pingStationListener(socket);
             checkForUpdateListener(socket);
             saveStationDataListener(socket);
+            requestStationInfoListener(socket);
             
             //for test.html
             setModeRawListener(socket);
@@ -740,6 +744,13 @@ function CheckForUpdate(stationId){
  */
 function RequestStationInfo(socketId){
     io.sockets.to(socketId).emit('getInfo',"");
+}
+
+function requestStationInfoListener(socket){
+    socket.on('requestStationInfo',function(){
+        console.log('requesting info from all stations');
+        io.sockets.emit('getInfo',"");
+    });
 }
 
 /*

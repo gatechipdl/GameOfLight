@@ -78,6 +78,7 @@
                 </tr>
             </table>
         </div>
+        <input type="button" onclick="emitRequestStationInfo()" value="Request Station Info">
     </body>
 
 
@@ -135,6 +136,11 @@
             socket.emit('checkForUpdate',{
                 'mac':mac
             });
+        }
+        
+        function emitRequestStationInfo(){
+            console.log('triggering request for info from stations');
+            socket.emit('requestStationInfo',"");
         }
 
         socket.on('connect', function(){
