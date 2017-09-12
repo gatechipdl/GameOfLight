@@ -110,6 +110,7 @@ loadStationData(); //get stationData on server start
 resetStationData();
 
 function saveStationData(){
+    console.log("saving station data");
     var dataJSON = JSON.stringify(stationData);
     fs.writeFileSync('./data/stations.json',dataJSON);
 }
@@ -208,6 +209,7 @@ function setStationIdListener(socket){
 
 function setStationModeListener(socket){
     socket.on('setStationMode',function(data){
+        console.log('setting mac '+data['mac']+' to mode '+data['modeId']);
         var data64 = base64js.fromByteArray(new Uint8Array([data['modeId']]));
         socket.broadcast.to([stationData[data['mac']]['socket']]).emit(data64);
         updateStationData({
@@ -220,6 +222,7 @@ function setStationModeListener(socket){
 
 function pingStationListener(socket){
     socket.on('pingStation',function(data){
+        console.log('pinging mac '+data['mac']+' at station number '+stationData[data['mac']]['id']);
         //var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
         var dataBuffer = new Uint8Array([0,45,0,255,0]); //all green
         socket.broadcast.to([stationData[data['mac']]['socket']]).emit('fillSolid',base64js.fromByteArray(dataBuffer));
@@ -228,6 +231,7 @@ function pingStationListener(socket){
 
 function checkForUpdateListener(socket){
     socket.on('checkForUpdate',function(data){
+        console.log('trigging check for firmware update on mac '+data['mac']+' at station number '+stationData[data['mac']]['id']);
         socket.broadcast.to([stationData[data['mac']]['socket']]).emit('checkForUpdate',"");
     });
 }

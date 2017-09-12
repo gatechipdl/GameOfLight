@@ -104,7 +104,7 @@
             0:'SlaveListen',
             1:'StrandTest1',
             2:'StrandTest2',
-            3:'StrandTest3'
+            3:'StrandTest3',
             4:'CapSenseTest',
             5:'CapSenseControl'
         }
@@ -197,13 +197,13 @@
                 txt.setAttribute("value",stationData[key]["id"]);
                 txt.setAttribute("min","0");
                 txt.setAttribute("max","32767");
-                txt.setAttribute("onchange","setStationId('"+stationData[key]["mac"]+"',this.value)")
+                txt.setAttribute("onchange","setStationId('"+stationData[key]["mac"]+"',this.value);")
                 col.appendChild(txt);
                 row.appendChild(col);
 
                 col = document.createElement("td");
                 txt = document.createElement("SELECT");
-                txt.setAttribute("onchange","setStationMode('"+stationData[key]["mac"]+"',this.value)")
+                txt.setAttribute("onchange","setStationMode('"+stationData[key]["mac"]+"',this.value);")
                 var opt;
                 opt = document.createElement("option");
                 opt.value = "0";
@@ -244,7 +244,7 @@
                 txt = document.createElement("INPUT");
                 txt.setAttribute("type","button");
                 txt.setAttribute("value",stationData[key]["socket"]);
-                txt.setAttribute("onchange","pingStation('"+stationData[key]["mac"]+"')");
+                txt.setAttribute("onclick","pingStation('"+stationData[key]["mac"]+"');");
                 col.appendChild(txt);
                 row.appendChild(col);
 
@@ -267,7 +267,7 @@
                 txt = document.createElement("INPUT");
                 txt.setAttribute("type","button");
                 txt.setAttribute("value",stationData[key]["firmware"]);
-                txt.setAttribute("onchange","emitCheckForUpdate('"+stationData[key]["mac"]+"')");
+                txt.setAttribute("onclick","emitCheckForUpdate('"+stationData[key]["mac"]+"');");
                 col.appendChild(txt);
                 row.appendChild(col);
 
