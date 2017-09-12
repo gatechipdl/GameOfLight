@@ -129,7 +129,13 @@ function resetStationData(){
 
 function updateStationData(data){
     Object.keys(data).forEach(function(key) {
-        Object.assign(stationData[key],data[key]); //merge data
+        if(stationData.hasOwnProperty(key)){
+            Object.assign(stationData[key],data[key]); //merge data
+        }
+        else{
+            stationData[key] = data[key]; //add data
+        }
+
     });
     io.sockets.emit('syncStationData',stationData);
 }
@@ -177,12 +183,12 @@ function setStationIdListener(socket){
                 console.log('setting mac '+data['mac']+' to station '+data['stationId']);
                 io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
                 //update station data
-                
+
                 updateStationData({
                     [data['mac']]:{
-                    'id':data['stationId']
-                }
-                                  });
+                        'id':data['stationId']
+                    }
+                });
             }
             else{
                 console.log('stationId not an integer: '+data);
@@ -200,9 +206,9 @@ function setStationModeListener(socket){
         io.to([stationData[data['mac']]['socket']]).emit(data64);
         updateStationData({
             [data['mac']]:{
-            'mode':data['modeId']
-        } 
-                          });
+                'mode':data['modeId']
+            } 
+        });
     });
 }
 
@@ -356,7 +362,7 @@ function setFiveColorsListener(socket){
         }
         */
         fiveColors = data['colors'];
-        
+
         var dataBuffer = new Uint8Array([
             fiveColors[0][0],fiveColors[0][1],fiveColors[0][2],
             fiveColors[1][0],fiveColors[1][1],fiveColors[1][2],
@@ -364,7 +370,7 @@ function setFiveColorsListener(socket){
             fiveColors[3][0],fiveColors[3][1],fiveColors[3][2],
             fiveColors[4][0],fiveColors[4][1],fiveColors[4][2]
         ]);
-        
+
         var data64 = base64js.fromByteArray(dataBuffer);
         io.sockets.to(data['socketId']).emit('setFives',data64);
     });
@@ -512,26 +518,26 @@ io.on('connection',function(socket){
     //ClearAll();
 
     stationDataListener(socket);
-    
+
     socket.on('subscribeStation',function(roomName){
         socket.join(roomName);
         socket.join('stations');
-        
+
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
         console.log("station client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
-        
+
         CheckForUpdate(roomName);
         RequestStationInfo(socket['id']);
-        
+
         capsenseListener(socket);
-        
-        
+
+
     });
-        
+
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
-        
+
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
         console.log("client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
@@ -548,10 +554,10 @@ io.on('connection',function(socket){
                 }
             }
         });
-        
+
         if(roomName=='browsers'){
             socket.emit('syncStationData',stationData);
-            
+
             //for manager.html
             setStationIdListener(socket);
             setStationModeListener(socket);
@@ -559,7 +565,7 @@ io.on('connection',function(socket){
             checkForUpdateListener(socket);
             saveStationDataListener(socket);
             requestStationInfoListener(socket);
-            
+
             //for test.html
             setModeRawListener(socket);
             checkForUpdatesListener(socket);
