@@ -52,10 +52,7 @@
                 <button onclick="emitCheckForUpdates()">Force a Request to Check for Firmware Updates</button>
             </li>
             <li>
-                <button onclick="setMode(0);">Set Mode - Rainbow Strand Test</button>
-            </li>
-            <li>
-                <button onclick="setMode(1);">Set Mode - Slave Listener</button>
+                <button onclick="setMode(0);">Set Mode - Slave Listener</button>
                 <ul>
                     <li>
                         <button onclick="setFiveHueColors();">Set Five 'Random' Colors</button>
@@ -74,28 +71,35 @@
                     <li>
                         <button onclick="whiteRipple();">white ripple</button>
                     </li>
+                    <li>
+                        <div>
+                            <input type="number" value="0" min="0", max="32767" id="fiveColorStationId">
+                            <input type="color" id="color1">
+                            <input type="color" id="color2">
+                            <input type="color" id="color3">
+                            <input type="color" id="color4">
+                            <input type="color" id="color5">
+                            <input type="button" value="send five colors" onclick="submitFiveColors()">
+                        </div>
+                    </li>
                 </ul>
             </li>
             <li>
-                <button onclick="setMode(2);">Set Mode - CapSense Controller</button>
+                <button onclick="setMode(1);">Set Mode - Rainbow Strand Test 1</button>
             </li>
             <li>
-                <button onclick="setMode(3);">Set Mode - Sinlon Strand Test</button>
+                <button onclick="setMode(2);">Set Mode - Sinlon Strand Test 2</button>
             </li>
             <li>
-                <button onclick="setMode(4);">Set Mode - Jungle Strand Test</button>
+                <button onclick="setMode(3);">Set Mode - Jungle Strand Test 3</button>
             </li>
             <li>
-                <div>
-                    <input type="number" value="0" min="0", max="32767" id="fiveColorStationId">
-                    <input type="color" id="color1">
-                    <input type="color" id="color2">
-                    <input type="color" id="color3">
-                    <input type="color" id="color4">
-                    <input type="color" id="color5">
-                    <input type="button" value="send five colors" onclick="submitFiveColors()">
-                </div>
+                <button onclick="setMode(4);">Set Mode - CapSense Test</button>
             </li>
+            <li>
+                <button onclick="setMode(5);">Set Mode - CapSense Controller</button>
+            </li>
+
         </ul>
     </body>
 
@@ -129,7 +133,7 @@
         function setFiveHueColors(){
             socket.emit('setFiveHueColors',"");
         }
-        
+
         //https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
         function hexToRgb(hex) {
             var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -143,7 +147,7 @@
         function submitFiveColors(){
             var jData = {};
             jData["stationId"] = document.getElementById("fiveColorStationId").value
-            
+
             var tColor;
             jData["colors"] = [];
             tColor = hexToRgb(document.getElementById("color1").value);
@@ -185,6 +189,7 @@
         function clearColors(){
             socket.emit('clearColors',"");
         }
+        
         function whiteRipple(){
             whiteBool = !whiteBool;
             if (whiteBool) {

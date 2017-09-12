@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3008;
+const baseVersion = 3009;
 
 const express = require('express');
 const app = express();
@@ -81,23 +81,25 @@ server.listen(port);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 var stationData = {
-    '60-01-94-10-89-E5':{
-        'online':false,
-        'id':'2',
-        'mode':0,
-        'mac':'60-01-94-10-89-E5',
-        'ip':'192.168.0.102',
-        'name':'ESP_1089E5',
-        'socket':'sdfghj'
+    "60-01-94-10-89-E1":{
+        "online":false,
+        "id":2000,
+        "mode":4,
+        "mac":"60-01-94-10-89-E1",
+        "ip":"192.168.0.99",
+        "name":"ESP_1089E1",
+        "socket":"sdfghj",
+        "firmware":"3005"
     }
 };
 
 //var operationModes = {
-//    0:'StrandTest',
-//    1:'SlaveListen',
-//    2:'CapSenseControl',
-//    3:'StrandTest2',
-//    4:'StrandTest3'
+//    0:'SlaveListen',
+//    1:'StrandTest1',
+//    2:'StrandTest2',
+//    3:'StrandTest3'
+//    4:'CapSenseTest',
+//    5:'CapSenseControl'
 //}
 
 function loadStationData(){
@@ -185,7 +187,7 @@ function setStationIdListener(socket){
             if( Number.parseInt(data['stationId'])){
                 console.log('setting mac '+data['mac']+' to station '+data['stationId']+" through socket: "+[stationData[data['mac']]['socket']]);
                 //console.log(io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']]))) );
-                io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
+                socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
                 //update station data
 
                 updateStationData({
@@ -207,7 +209,7 @@ function setStationIdListener(socket){
 function setStationModeListener(socket){
     socket.on('setStationMode',function(data){
         var data64 = base64js.fromByteArray(new Uint8Array([data['modeId']]));
-        io.to([stationData[data['mac']]['socket']]).emit(data64);
+        socket.broadcast.to([stationData[data['mac']]['socket']]).emit(data64);
         updateStationData({
             [data['mac']]:{
                 'mode':data['modeId']
@@ -220,13 +222,13 @@ function pingStationListener(socket){
     socket.on('pingStation',function(data){
         //var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
         var dataBuffer = new Uint8Array([0,45,0,255,0]); //all green
-        io.to([stationData[data['mac']]['socket']]).emit('fillSolid',base64js.fromByteArray(dataBuffer));
+        socket.broadcast.to([stationData[data['mac']]['socket']]).emit('fillSolid',base64js.fromByteArray(dataBuffer));
     });
 }
 
 function checkForUpdateListener(socket){
     socket.on('checkForUpdate',function(data){
-        io.to([stationData[data['mac']]['socket']]).emit('checkForUpdate',"");
+        socket.broadcast.to([stationData[data['mac']]['socket']]).emit('checkForUpdate',"");
     });
 }
 

@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3008";
+const char* baseVersion = "3009";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -70,11 +70,12 @@ unsigned int EEPROMReadInt(int p_address);
 void readCapSenseInputs();
 void capSenseLEDUpdate();
 void PostSetupInitialization();
-void StrandTest();
 void SlaveListen();
-void CapSenseControl();
+void StrandTest1();
 void StrandTest2();
 void StrandTest3();
+void CapSenseTest();
+void CapSenseControl();
 void connectSocketEventHandler(const char * payload, size_t payloadLength);
 void clearSocketEventHandler(const char * payload, size_t payloadLength);
 void fillSolidSocketEventHandler(const char * payload, size_t payloadLength);
@@ -87,14 +88,15 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength);
 
 
 // Operation Variables
-uint8_t operationMode = 2;
+uint8_t operationMode = 4;
 typedef void (*OperationFunction) ();
-OperationFunction operations[5] = {
-  StrandTest,              // 0 - rainbow
-  SlaveListen,             // 1 - listening
-  CapSenseControl,         // 2 - cap sense controller
-  StrandTest2,             // 3 - another strandtest
-  StrandTest3              // 4 - another strandtest
+OperationFunction operations[6] = {
+  SlaveListen,            // 0 - listening
+  StrandTest1,            // 1 - rainbow
+  StrandTest2,            // 2 - another strandtest
+  StrandTest3,            // 3 - another strandtest
+  CapSenseTest,           // 4 - cap sense test
+  CapSenseControl         // 5 - cap sense controller
 };
 OperationFunction Operate = operations[operationMode]; //default startup operation mode
 
@@ -110,8 +112,12 @@ void capSenseLEDUpdate() {
 
 void PostSetupInitialization(){};
 
-void StrandTest() {
-  // 0 - rainbow
+void SlaveListen() {
+  // 0 - listening
+}
+
+void StrandTest1() {
+  // 1 - rainbow
   fill_rainbow(leds, LED_COUNT, gHue, 7);
   FastLED.show();
   FastLED.delay(1000 / 120);
@@ -120,12 +126,8 @@ void StrandTest() {
   }
 }
 
-void SlaveListen() {
-  // 1 - listening
-}
-
 void StrandTest2() {
-  // 3 - sinelon
+  // 2 - sinelon
   // a colored dot sweeping back and forth, with fading trails
   fadeToBlackBy( leds, LED_COUNT, 20);
   int pos = beatsin16(13, 0, LED_COUNT);
@@ -138,7 +140,7 @@ void StrandTest2() {
 }
 
 void StrandTest3() {
-  // 4 - juggle
+  // 3 - juggle
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, LED_COUNT, 20);
   byte dothue = 0;
@@ -152,6 +154,61 @@ void StrandTest3() {
     gHue++;
   }
 }
+
+
+void CapSenseTest() {
+  
+  readCapSenseInputs();
+  
+  if (cap_dev[11] < cap_threshold) {
+    for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
+      if (segmentBris[j] < 1.0) {
+        segmentBris[j] = segmentBris[j] + briStep2;
+        segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
+        break;
+      }
+    }
+    capSenseLEDUpdate();
+  }
+  for (uint8_t i = 0; i < 12; i++) {
+    cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
+    if (cap_curr[i]) {
+      int bri_or_sat = i / 5;
+      int s = i - 5;
+      switch (bri_or_sat) {
+        case 0:
+          segmentHues[i] = (segmentHues[i] + hueStep);
+          segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
+          break;
+        case 1:
+          segmentSats[s] = (segmentSats[s] + satSteps[s]);
+          satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
+          segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
+          break;
+        default: //case 2
+          for (int j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
+            if (segmentBris[j] > 0.0) {
+              segmentBris[j] = segmentBris[j] - briStep1;
+              segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
+              break;
+            } else {
+              if (j == 0) {
+                for (int k = 0; k < LED_SEGMENT_COUNT; k++) {
+                  segmentSats[k] = 1.0;
+                }
+              }
+            }
+          }
+          break;
+      }
+    }
+    
+    cap_last[i] = cap_curr[i]; //reset cap_last
+  }
+
+  capSenseLEDUpdate();
+}
+
 
 void CapSenseControl() {
   

@@ -63,11 +63,12 @@
                     <td><input type="number" value="5" min="0", max="32767" onchange="setStationId('60-01-94-10-89-E5',this.value)"></td>
                     <td>
                         <select onchange="setStationMode('60-01-94-10-89-E5',this.value)">
-                            <option value="0" selected>StrandTest</option>
-                            <option value="1">SlaveListen</option>
-                            <option value="2">CapSenseControl</option>
-                            <option value="3">StrandTest2</option>
-                            <option value="4">StrandTest3</option>
+                            <option value="0">SlaveListen</option>
+                            <option value="1">StrandTest1</option>
+                            <option value="2">StrandTest2</option>
+                            <option value="3">StrandTest3</option>
+                            <option value="4" selected>CapSenseTest</option>
+                            <option value="5">CapSenseControl</option>
                         </select>
                     </td>
                     <td>sdfghj</td>
@@ -87,24 +88,27 @@
         var socket = io.connect('/');
 
         var stationData = {
-            //            '60-01-94-10-89-E5':{
-            //                'online':false,
-            //                'id':'2',
-            //                'mode':0,
-            //                'mac':'60-01-94-10-89-E5',
-            //                'ip':'192.168.0.102',
-            //                'name':'ESP_1089E5',
-            //                'socket':'sdfghj'
-            //            }
+//            "60-01-94-10-89-E1":{
+//                "online":false,
+//                "id":2000,
+//                "mode":4,
+//                "mac":"60-01-94-10-89-E1",
+//                "ip":"192.168.0.99",
+//                "name":"ESP_1089E1",
+//                "socket":"sdfghj",
+//                "firmware":"3005"
+//            }
         };
 
         var operationModes = {
-            0:'StrandTest',
-            1:'SlaveListen',
-            2:'CapSenseControl',
-            3:'StrandTest2',
-            4:'StrandTest3'
-        };
+            0:'SlaveListen',
+            1:'StrandTest1',
+            2:'StrandTest2',
+            3:'StrandTest3'
+            4:'CapSenseTest',
+            5:'CapSenseControl'
+        }
+
 
         function setStationId(mac,stationId){
             console.log('setting mac '+mac+' to station '+stationId);
@@ -138,12 +142,12 @@
                 'mac':mac
             });
         }
-        
+
         function emitRequestStationInfo(){
             console.log('triggering request for info from stations');
             socket.emit('requestStationInfo',"");
         }
-        
+
         function emitSaveStationData(){
             console.log('trigging request to save station data on a file on the server');
             socket.emit('saveStationData',"");
@@ -178,7 +182,7 @@
                 row.appendChild(col);
             });
             tbl.appendChild(row);
-            
+
             Object.keys(stationData).forEach(function(key) {
                 row = document.createElement("tr");
                 //var keys = ["online","id","mode","socket",mac","ip","name","firmware"]
@@ -196,41 +200,46 @@
                 txt.setAttribute("onchange","setStationId('"+stationData[key]["mac"]+"',this.value)")
                 col.appendChild(txt);
                 row.appendChild(col);
-                
+
                 col = document.createElement("td");
                 txt = document.createElement("SELECT");
                 txt.setAttribute("onchange","setStationMode('"+stationData[key]["mac"]+"',this.value)")
                 var opt;
                 opt = document.createElement("option");
                 opt.value = "0";
-                opt.textContent = "StrandTest";
-                txt.appendChild(opt);
-                
-                opt = document.createElement("option");
-                opt.value = "1";
                 opt.textContent = "SlaveListen";
                 txt.appendChild(opt);
-                
+
+                opt = document.createElement("option");
+                opt.value = "1";
+                opt.textContent = "StrandTest1";
+                txt.appendChild(opt);
+
                 opt = document.createElement("option");
                 opt.value = "2";
-                opt.textContent = "CapSenseControl";
+                opt.textContent = "StrandTest2";
                 txt.appendChild(opt);
-                
+
                 opt = document.createElement("option");
                 opt.value = "3";
-                opt.textContent = "StrandTest2";
+                opt.textContent = "StrandTest3";
                 txt.appendChild(opt);
                 
                 opt = document.createElement("option");
                 opt.value = "4";
-                opt.textContent = "StrandTest3";
+                opt.textContent = "CapSenseTest";
                 txt.appendChild(opt);
+                
+                opt = document.createElement("option");
+                opt.value = "5";
+                opt.textContent = "CapSenseControl";
+                txt.appendChild(opt);
+                
                 txt.selectedIndex = ""+stationData[key]["mode"];
-                //txt.setAttribute("value",""+stationData[key]["mode"]);
-                        
+
                 col.appendChild(txt);
                 row.appendChild(col);
-                
+
                 col = document.createElement("td");
                 txt = document.createElement("INPUT");
                 txt.setAttribute("type","button");
@@ -238,22 +247,22 @@
                 txt.setAttribute("onchange","pingStation('"+stationData[key]["mac"]+"')");
                 col.appendChild(txt);
                 row.appendChild(col);
-                
+
                 col = document.createElement("td");
                 txt = document.createTextNode(stationData[key]["mac"]);
                 col.appendChild(txt);
                 row.appendChild(col);
-                
+
                 col = document.createElement("td");
                 txt = document.createTextNode(stationData[key]["ip"]);
                 col.appendChild(txt);
                 row.appendChild(col);
-                
+
                 col = document.createElement("td");
                 txt = document.createTextNode(stationData[key]["name"]);
                 col.appendChild(txt);
                 row.appendChild(col);            
-                
+
                 col = document.createElement("td");
                 txt = document.createElement("INPUT");
                 txt.setAttribute("type","button");
@@ -261,7 +270,7 @@
                 txt.setAttribute("onchange","emitCheckForUpdate('"+stationData[key]["mac"]+"')");
                 col.appendChild(txt);
                 row.appendChild(col);
-                
+
                 tbl.appendChild(row);
             });
 
