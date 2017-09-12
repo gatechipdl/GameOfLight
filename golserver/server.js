@@ -26,7 +26,7 @@ app.use(express.static(__dirname + '/public'));
 //check github.com/esp8266/Arduino/issues/2228 for example
 app.get('/update/base',function(req,res){
     //check version somehow
-    
+
     console.log('a device is requesting an update');
     console.dir(req.headers);
     if(parseInt(req.headers['x-esp8266-version'])!=baseVersion){ //could be <
@@ -65,6 +65,171 @@ server.listen(port);
 
 
 
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Station Management
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+var stationData = {
+    '60-01-94-10-89-E5':{
+        'online':false,
+        'id':'2',
+        'mode':0,
+        'mac':'60-01-94-10-89-E5',
+        'ip':'192.168.0.102',
+        'name':'ESP_1089E5',
+        'socket':'sdfghj'
+    }
+};
+
+//var operationModes = {
+//    0:'StrandTest',
+//    1:'SlaveListen',
+//    2:'CapSenseControl',
+//    3:'StrandTest2',
+//    4:'StrandTest3'
+//}
+
+function loadStationData(){
+    var dataFile = fs.readFileSync('./data/stations.json');
+    stationData = JSON.parse(dataFile);
+}
+loadStationData(); //get stationData on server start
+
+function saveStationData(){
+    var dataJSON = JSON.stringify(stationData);
+    fs.writeFileSync('./data/stations.json',dataJSON);
+}
+
+// removes all data entries
+function clearStationData(){
+    Object.keys(stationData).forEach(function(key) {
+        delete stationData[key];
+    });
+}
+
+// sets all data entries' online to false
+// run at start
+function resetStationData(){
+    Object.keys(stationData).forEach(function(key) {
+        stationData[key]['online'] = false;
+    });
+}
+
+function updateStationData(data){
+    Object.keys(data).forEach(function(key) {
+        Object.assign(stationData[key],data[key]); //merge data
+    });
+    io.sockets.emit('syncStationData',stationData);
+}
+
+function stationDataListener(socket){
+    socket.on('idhostnameipmac',function(data){
+        //TODO: parse the pieces and keep in a managed list
+        console.log('idhostnameipmac');
+        console.log(data);
+        //parse and add to managed list
+        var aData = data.split(",");
+        //                    stationId_str + ","
+        //                  + String(WiFi.hostname()) + ","
+        //                  + String(WiFi.localIP()) + ","
+        //                  + String(mac[5], HEX) + ","
+        //                  + String(mac[4], HEX) + ","
+        //                  + String(mac[3], HEX) + ","
+        //                  + String(mac[2], HEX) + ","
+        //                  + String(mac[1], HEX) + ","
+        //                  + String(mac[0], HEX)).c_str()
+        var mData = aData[8]+"-"+aData[7]+"-"+aData[6]+"-"+aData[5]+"-"+aData[4]+"-"+aData[3];
+        var sData = {
+            mData:{
+                'online':true,
+                'id':aData[0],
+                'mode':0,
+                'mac':mData,
+                'ip':aData[2],
+                'name':aData[1],
+                'socket':socket['id']
+            }
+        }
+        console.log(sData);
+        updateStationData(sData)
+    });
+}
+
+//changes the id value of a number
+function setStationIdListener(socket){
+    socket.on('setStationId',function(data){
+        if( !isNaN(data['stationId'])){
+            if( Number.parseInt(data['stationId'])){
+                console.log('setting mac '+data['mac']+' to station '+data['stationId']);
+                io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
+                //update station data
+                
+                updateStationData({
+                    [data['mac']]:{
+                    'id':data['stationId']
+                }
+                                  });
+            }
+            else{
+                console.log('stationId not an integer: '+data);
+            }
+        }else{
+            console.log('data issue: '+data);
+            console.dir(data);
+        }
+    })
+}
+
+function setStationModeListener(socket){
+    socket.on('setStationMode',function(data){
+        var data64 = base64js.fromByteArray(new Uint8Array([data['modeId']]));
+        io.to([stationData[data['mac']]['socket']]).emit(data64);
+        updateStationData({
+            [data['mac']]:{
+            'mode':data['modeId']
+        } 
+                          });
+    });
+}
+
+function pingStationListener(socket){
+    socket.on('pingStation',function(data){
+        //var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
+        var dataBuffer = new Uint8Array([0,45,0,255,0]); //all green
+        io.to([stationData[data['mac']]['socket']]).emit('fillSolid',base64js.fromByteArray(dataBuffer));
+    });
+}
+
+function checkForUpdateListener(socket){
+    socket.on('checkForUpdate',function(data){
+        io.to([stationData[data['mac']]['socket']]).emit('checkForUpdate',"");
+    });
+}
+
+
+
+
+
+
+
+//var configFile = fs.readFileSync('./databaseTest.json');
+//var config = JSON.parse(configFile);
+//config.push({"totalTapScore": totTap, "tileId": tileId, "timeStamp": time});
+////console.log(' db now is, ', config)
+//var configJSON = JSON.stringify(config);
+//fs.writeFileSync('./databaseTest.json', configJSON);
+
 //stations = [
 //    ESP_1089E5	60-01-94-10-89-E5	192.168.0.102	01:09:16
 //3	ESP_0FF841	60-01-94-0F-F8-41	192.168.0.103	01:09:18
@@ -102,6 +267,143 @@ server.listen(port);
 
 
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   test.html Socket Methods
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function setModeRawListener(socket){
+    socket.on('setModeRaw',function(dataRaw){
+        console.log(dataRaw);
+        var data64 = base64js.fromByteArray(new Uint8Array([dataRaw]));
+        console.log(data64);
+        //socket.broadcast.to('stations').emit('setMode',data64);  - these didn't work
+        //io.sockets.to('stations').emit('setMode',data64); - these didn't work
+        io.sockets.emit('setMode',data64);
+    });
+}
+
+function checkForUpdatesListener(socket){
+    socket.on('checkForUpdates',function(){
+        io.sockets.emit('checkForUpdate',"");
+    });
+}
+
+function setFiveHueColorsListener(socket){
+    socket.on('setFiveHueColors',function(){
+        fiveColors = new Array(5).fill(new CRGB(0,0,0));
+        hue = (hue+10)%hueBase;
+        console.log(hue);
+        var t_hue = hue;
+        t_hue = (hue+10)%hueBase;
+        fiveColors[0] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+20)%hueBase;
+        fiveColors[1] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+30)%hueBase;
+        fiveColors[2] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+40)%hueBase;
+        fiveColors[3] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+        t_hue = (hue+50)%hueBase;
+        fiveColors[4] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
+
+        var dataBuffer = new Uint8Array([
+            fiveColors[0].r,fiveColors[0].g,fiveColors[0].b,
+            fiveColors[1].r,fiveColors[1].g,fiveColors[1].b,
+            fiveColors[2].r,fiveColors[2].g,fiveColors[2].b,
+            fiveColors[3].r,fiveColors[3].g,fiveColors[3].b,
+            fiveColors[4].r,fiveColors[4].g,fiveColors[4].b
+        ]);
+        var data64 = base64js.fromByteArray(dataBuffer);
+        io.sockets.emit('setFives',data64);
+    });
+}
+
+function clearColorsListener(socket){
+    socket.on('clearColors',function(){{
+        console.log('clear colors');
+        io.sockets.emit('clear',"");
+    }});
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   SYNC Data
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//var uiSettings = {
+//    'lastElementChanged':'test',
+//    'elements':{
+//        'test':'value'
+//    }
+//};
+//
+//function syncUISettings(socket){
+//    socket.on('syncUISettings',function(data){
+//        uiSettings['elements'][Object.keys(data)[0]] = data[Object.keys(data)[0]];;// = merge.recursive(true,data,uiSettings['elements']);
+//
+//        console.log(Object.keys(data)[0]);
+//        uiSettings['lastElementChanged'] = Object.keys(data)[0]; //assumes only one pair
+//        //console.log(uiSettings['lastElementChanged']);
+//
+//        //broadcast the updates and change for other clients to process
+//        socket.broadcast.emit('syncUISettings',data);
+//    });
+//}
+
+//var modelData = {
+//    //'0':[0,0,0,4,0,0,127]
+//    //'1':[x,y,z,s,r,g,b]
+//};
+//
+//function syncModelData(socket){
+//    socket.on('syncModelData',function(data){
+//        Object.keys(data).forEach(function(key) {
+//            modelData[key] = data[key];
+//        });
+//        //broadcast the updates and change for other clients to process
+//        socket.broadcast.emit('syncModelData',data);
+//    });
+//}
+//
+//var systemVariables = {
+//    'availableId':0
+//};
+//
+//function syncSystemVariables(socket){
+//    socket.on('syncSystemVariables',function(data){
+//        Object.keys(data).forEach(function(key) {
+//            systemVariables[key] = data[key];
+//        });
+//        //broadcast the updates and change for other clients to process
+//        socket.broadcast.emit('syncSystemVariables',data);
+//    });
+//}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   UDP
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 udpSocket.on('error', (err) =>{
     console.log('udp socket error:\n${err.stack}');
     console.log('closing the udp socket');
@@ -136,6 +438,22 @@ udpSocket.bind(udpPortRecv, () => {});
 
 
 
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Socket.IO
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 var clientSockets = {};
 //node id
 //socket io id
@@ -146,13 +464,9 @@ var clientSockets = {};
 io.on('connection',function(socket){
     console.log("client "+socket['id']+" connected");
     ClearAll();
-    
-    socket.on('idhostnameipmac',function(data){
-        //TODO: parse the pieces and keep in a managed list
-        console.log('idhostnameipmac');
-        console.log(data);
-    });
-    
+
+
+
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
         console.log("client "+socket['id']+" joined room "+roomName);
@@ -160,12 +474,12 @@ io.on('connection',function(socket){
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
         console.log(idx);
-        
+
         clientSockets[socket['id']] = {
             'iosocket':socket['id'],
             'ipaddress':idx
         }
-        
+
         socket.on('disconnect',function(){
             for(var key in clientSockets){
                 if(clientSockets[key]['iosocket']==socket['id']){
@@ -173,56 +487,24 @@ io.on('connection',function(socket){
                 }
             }
         });
-        
+
         if(roomName=='stations'){
             CheckForUpdate(roomName);
+            stationDataListener(socket);
         }
-        
+
         if(roomName=='browsers'){
-            socket.on('setModeRaw',function(dataRaw){
-                console.log(dataRaw);
-                var data64 = base64js.fromByteArray(new Uint8Array([dataRaw]));
-                console.log(data64);
-                //socket.broadcast.to('stations').emit('setMode',data64);  - these didn't work
-                //io.sockets.to('stations').emit('setMode',data64); - these didn't work
-                io.sockets.emit('setMode',data64);
-            });
-            
-            socket.on('checkForUpdates',function(){
-                io.sockets.emit('checkForUpdate',"");
-            });
-            
-            socket.on('setFiveHueColors',function(){
-                fiveColors = new Array(5).fill(new CRGB(0,0,0));
-                hue = (hue+10)%hueBase;
-                console.log(hue);
-                var t_hue = hue;
-                t_hue = (hue+10)%hueBase;
-                fiveColors[0] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
-                t_hue = (hue+20)%hueBase;
-                fiveColors[1] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
-                t_hue = (hue+30)%hueBase;
-                fiveColors[2] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
-                t_hue = (hue+40)%hueBase;
-                fiveColors[3] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
-                t_hue = (hue+50)%hueBase;
-                fiveColors[4] = HSVtoRGB(t_hue/(hueBase),1.0,1.0);
-                
-                var dataBuffer = new Uint8Array([
-                    fiveColors[0].r,fiveColors[0].g,fiveColors[0].b,
-                    fiveColors[1].r,fiveColors[1].g,fiveColors[1].b,
-                    fiveColors[2].r,fiveColors[2].g,fiveColors[2].b,
-                    fiveColors[3].r,fiveColors[3].g,fiveColors[3].b,
-                    fiveColors[4].r,fiveColors[4].g,fiveColors[4].b
-                ]);
-                var data64 = base64js.fromByteArray(dataBuffer);
-                io.sockets.emit('setFives',data64);
-            });
-            
-            socket.on('clearColors',function(){{
-                console.log('clear colors');
-                io.sockets.emit('clear',"");
-            }});
+            socket.emit('syncStationData',stationData);
+
+            setStationIdListener(socket);
+            setStationModeListener(socket);
+            pingStationListener(socket);
+            checkForUpdateListener(socket);
+
+            setModeRawListener(socket);
+            checkForUpdatesListener(socket);
+            setFiveHueColorsListener(socket);
+            clearColorsListener(socket);
         }
     });
 });
@@ -513,7 +795,7 @@ function udpSendColors(){
         fiveColors[4].r,
         fiveColors[4].g,
         fiveColors[4].b]
-    );
+                             );
     sendUDPSocket(msg,'7');
 }
 
@@ -526,7 +808,7 @@ var doStuff3 = function(){
     fiveColors[3] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     fiveColors[4] = HSVtoRGB(hue2/(hueBase),1.0,1.0);
     SetFiveColors('stations',fiveColors);
-    
+
     console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
     udpSendColors();
 }
