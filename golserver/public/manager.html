@@ -181,7 +181,7 @@
             
             Object.keys(stationData).forEach(function(key) {
                 row = document.createElement("tr");
-                //var keys = ["online","id","mode","mac","ip","name","socket","firmware"]
+                //var keys = ["online","id","mode","socket",mac","ip","name","firmware"]
                 col = document.createElement("td");
                 txt = document.createTextNode(stationData[key]["online"]);
                 col.appendChild(txt);
@@ -234,8 +234,13 @@
                 col = document.createElement("td");
                 txt = document.createElement("INPUT");
                 txt.setAttribute("type","button");
-                txt.setAttribute("value",stationData[key]["mac"]);
+                txt.setAttribute("value",stationData[key]["socket"]);
                 txt.setAttribute("onchange","pingStation('"+stationData[key]["mac"]+"')");
+                col.appendChild(txt);
+                row.appendChild(col);
+                
+                col = document.createElement("td");
+                txt = document.createTextNode(stationData[key]["mac"]);
                 col.appendChild(txt);
                 row.appendChild(col);
                 
@@ -247,12 +252,7 @@
                 col = document.createElement("td");
                 txt = document.createTextNode(stationData[key]["name"]);
                 col.appendChild(txt);
-                row.appendChild(col);
-                
-                col = document.createElement("td");
-                txt = document.createTextNode(stationData[key]["socket"]);
-                col.appendChild(txt);
-                row.appendChild(col);
+                row.appendChild(col);            
                 
                 col = document.createElement("td");
                 txt = document.createElement("INPUT");

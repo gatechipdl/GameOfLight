@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3007";
+const char* baseVersion = "3008";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -267,12 +267,13 @@ void getInfoSocketEventHandler(const char * payload, size_t payloadLength) {
                  ("\"" + stationId_str + ","
                   + String(WiFi.hostname()) + ","
                   + String(WiFi.localIP()) + ","
-                  + String(mac[5], HEX) + ","
-                  + String(mac[4], HEX) + ","
-                  + String(mac[3], HEX) + ","
-                  + String(mac[2], HEX) + ","
+                  + String(mac[0], HEX) + ","
                   + String(mac[1], HEX) + ","
-                  + String(mac[0], HEX)
+                  + String(mac[2], HEX) + ","
+                  + String(mac[3], HEX) + ","
+                  + String(mac[4], HEX) + ","
+                  + String(mac[5], HEX) + ","
+                  + String(baseVersion)
                   + "\"").c_str()
                 );
 }

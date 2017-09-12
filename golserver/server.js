@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3007;
+const baseVersion = 3008;
 
 const express = require('express');
 const app = express();
@@ -147,15 +147,18 @@ function stationDataListener(socket){
         console.log(data);
         //parse and add to managed list
         var aData = data.split(",");
-        //                    stationId_str + ","
+        //                  ("\"" + stationId_str + ","
         //                  + String(WiFi.hostname()) + ","
         //                  + String(WiFi.localIP()) + ","
-        //                  + String(mac[5], HEX) + ","
-        //                  + String(mac[4], HEX) + ","
-        //                  + String(mac[3], HEX) + ","
-        //                  + String(mac[2], HEX) + ","
+        //                  + String(mac[0], HEX) + ","
         //                  + String(mac[1], HEX) + ","
-        //                  + String(mac[0], HEX)).c_str()
+        //                  + String(mac[2], HEX) + ","
+        //                  + String(mac[3], HEX) + ","
+        //                  + String(mac[4], HEX) + ","
+        //                  + String(mac[5], HEX) + ","
+        //                  + String(baseVersion)
+        //                  + "\"").c_str()
+        //                );
         var mData = aData[3]+"-"+aData[4]+"-"+aData[5]+"-"+aData[6]+"-"+aData[7]+"-"+aData[8];
         var sData = {
             [mData]:{
@@ -166,7 +169,7 @@ function stationDataListener(socket){
                 'ip':aData[2],
                 'name':aData[1],
                 'socket':socket['id'],
-                'firmware':'unknown'
+                'firmware':aData[9]
             }
         }
         console.log("sData");
@@ -180,7 +183,8 @@ function setStationIdListener(socket){
     socket.on('setStationId',function(data){
         if( !isNaN(data['stationId'])){
             if( Number.parseInt(data['stationId'])){
-                console.log('setting mac '+data['mac']+' to station '+data['stationId']);
+                console.log('setting mac '+data['mac']+' to station '+data['stationId']+" through socket: "+[stationData[data['mac']]['socket']]);
+                //console.log(io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']]))) );
                 io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
                 //update station data
 
@@ -528,11 +532,19 @@ io.on('connection',function(socket){
         console.log("station client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
 
         CheckForUpdate(roomName);
-        RequestStationInfo(socket['id']);
-
         capsenseListener(socket);
 
-
+        socket.on('disconnect',function(){
+            Object.keys(stationData).forEach(function(key) {
+                if(stationData[key]['socketId'] === socket['id']){
+                    updateStationData({
+                        [key]:{
+                            "online":false
+                        }
+                    });
+                }
+            });
+        });
     });
 
     socket.on('subscribe',function(roomName){
@@ -923,4 +935,4 @@ var doStuff4 = function(){
 }
 //setInterval(doStuff2,100000/60);
 //setInterval(doStuff4,1000/30);
-setInterval(CheckForUpdate,100000);
+setInterval(CheckForUpdate,600000);
