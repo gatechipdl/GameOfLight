@@ -105,6 +105,7 @@ function loadStationData(){
     stationData = JSON.parse(dataFile);
 }
 loadStationData(); //get stationData on server start
+resetStationData();
 
 function saveStationData(){
     var dataJSON = JSON.stringify(stationData);
@@ -158,8 +159,8 @@ function stationDataListener(socket){
                 'mac':mData,
                 'ip':aData[2],
                 'name':aData[1],
-                'socket':socket['id']
-                'firmware':"unknown"
+                'socket':socket['id'],
+                'firmware':'unknown'
             }
         }
         console.log("sData");
