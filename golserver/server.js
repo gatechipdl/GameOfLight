@@ -150,7 +150,7 @@ function stationDataListener(socket){
         //                  + String(mac[2], HEX) + ","
         //                  + String(mac[1], HEX) + ","
         //                  + String(mac[0], HEX)).c_str()
-        var mData = aData[8]+"-"+aData[7]+"-"+aData[6]+"-"+aData[5]+"-"+aData[4]+"-"+aData[3];
+        var mData = aData[3]+"-"+aData[4]+"-"+aData[5]+"-"+aData[6]+"-"+aData[7]+"-"+aData[8];
         var sData = {
             [mData]:{
                 'online':true,
@@ -466,17 +466,19 @@ var clientSockets = {};
 
 io.on('connection',function(socket){
     console.log("client "+socket['id']+" connected");
-    ClearAll();
+    //ClearAll();
 
     stationDataListener(socket);
 
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
-        console.log("client "+socket['id']+" joined room "+roomName);
-        console.dir(socket.handshake.address);
+        
+        //console.dir(socket.handshake.address);
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/,''); //chop down ipv6 to ipv4
-        console.log(idx);
+        //console.log(idx);
+        
+        console.log("client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
 
         clientSockets[socket['id']] = {
             'iosocket':socket['id'],
@@ -492,8 +494,7 @@ io.on('connection',function(socket){
         });
 
         if(roomName=='stations'){
-            CheckForUpdate(roomName);
-            
+            CheckForUpdate(roomName);    
         }
 
         if(roomName=='browsers'){
