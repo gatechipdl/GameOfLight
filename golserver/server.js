@@ -151,7 +151,7 @@ function stationDataListener(socket){
         //                  + String(mac[0], HEX)).c_str()
         var mData = aData[8]+"-"+aData[7]+"-"+aData[6]+"-"+aData[5]+"-"+aData[4]+"-"+aData[3];
         var sData = {
-            mData:{
+            [mData]:{
                 'online':true,
                 'id':aData[0],
                 'mode':0,
@@ -159,8 +159,10 @@ function stationDataListener(socket){
                 'ip':aData[2],
                 'name':aData[1],
                 'socket':socket['id']
+                'firmware':"unknown"
             }
         }
+        console.log("sData");
         console.log(sData);
         updateStationData(sData)
     });
@@ -465,7 +467,7 @@ io.on('connection',function(socket){
     console.log("client "+socket['id']+" connected");
     ClearAll();
 
-
+    stationDataListener(socket);
 
     socket.on('subscribe',function(roomName){
         socket.join(roomName);
@@ -490,7 +492,7 @@ io.on('connection',function(socket){
 
         if(roomName=='stations'){
             CheckForUpdate(roomName);
-            stationDataListener(socket);
+            
         }
 
         if(roomName=='browsers'){
