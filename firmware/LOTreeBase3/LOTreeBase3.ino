@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3006";
+const char* baseVersion = "3007";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -203,7 +203,7 @@ void CapSenseControl() {
     //if there was a state change
     if(cap_curr[i]!=cap_last[i]){
       //send the stationId, the id of the cap sensor, and the current state to which it changed
-      webSocket.emit("capSense",(String(stationId, DEC)+","+String(i,DEC)+","+String(cap_curr[i],DEC)).c_str());
+      webSocket.emit("capSense",("\""+String(stationId, DEC)+","+String(i,DEC)+","+String(cap_curr[i],DEC)+"\"").c_str());
       if(cap_curr[i]>cap_last[i]){
         //change was from touched to released
       }else
@@ -264,7 +264,7 @@ void getInfoSocketEventHandler(const char * payload, size_t payloadLength) {
   byte mac[6];
   WiFi.macAddress(mac);
   webSocket.emit("idhostnameipmac",
-                 (stationId_str + ","
+                 ("\"" + stationId_str + ","
                   + String(WiFi.hostname()) + ","
                   + String(WiFi.localIP()) + ","
                   + String(mac[5], HEX) + ","
@@ -272,7 +272,8 @@ void getInfoSocketEventHandler(const char * payload, size_t payloadLength) {
                   + String(mac[3], HEX) + ","
                   + String(mac[2], HEX) + ","
                   + String(mac[1], HEX) + ","
-                  + String(mac[0], HEX)).c_str()
+                  + String(mac[0], HEX)
+                  + "\"").c_str()
                 );
 }
 
@@ -538,8 +539,8 @@ void loop() {
   webSocket.loop();
   Operate();  
   
-  //check for firmware updates once every two minutes
-  EVERY_N_SECONDS(120) {
+  //check for firmware updates once every ten minutes
+  EVERY_N_SECONDS(600) {
     if (WiFi.status() == WL_CONNECTED) {
       checkForUpdate();
     }
