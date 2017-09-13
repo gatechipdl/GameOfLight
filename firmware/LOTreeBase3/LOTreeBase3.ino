@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3011";
+const char* baseVersion = "3012";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -436,7 +436,7 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) 
   unsigned char binPayload[output_length];
   decode_base64((unsigned char*)payload, binPayload);
 
-  stationId = (binPayload[0]) | (binPayload[1]<<8);
+  stationId = (binPayload[0]<<8) | (binPayload[1]<<0);
   EEPROM.begin(512);
   EEPROMWriteInt(0, stationId);
   EEPROM.commit();

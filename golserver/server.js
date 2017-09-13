@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3011;
+const baseVersion = 3012;
 
 const express = require('express');
 const app = express();
@@ -193,8 +193,6 @@ function loadStationData(){
             if( !isNaN(data['stationId'])){
                 if( Number.parseInt(data['stationId'])){
                     console.log('setting mac '+data['mac']+' to station '+data['stationId']+" through socket: "+[stationData[data['mac']]['socket']]);
-                    //console.log(io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']]))) );
-                    //socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
                     var dataBuff16 = new Uint16Array([data['stationId']]);
                     console.log('dataBuff16 ',dataBuff16);
                     var dataBuff8 = new Uint8Array(dataBuff16.buffer);
