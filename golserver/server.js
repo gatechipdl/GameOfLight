@@ -220,7 +220,7 @@ function loadStationData(){
         socket.on('setStationMode',function(data){
             console.log('setting mac '+data['mac']+' to mode '+data['modeId']);
             var data64 = base64js.fromByteArray(new Uint8Array([data['modeId']]));
-            socket.broadcast.to([stationData[data['mac']]['socket']]).emit(data64);
+            socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setMode',data64);
             updateStationData({
                 [data['mac']]:{
                     'mode':data['modeId']
@@ -391,7 +391,7 @@ function loadStationData(){
             ]);
 
             var data64 = base64js.fromByteArray(dataBuffer);
-            io.sockets.to(data['socketId']).emit('setFives',data64);
+            socket.broadcast.to(data['socketId']).emit('setFives',data64);
         });
     }
 
