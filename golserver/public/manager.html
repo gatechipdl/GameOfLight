@@ -81,6 +81,7 @@
         </div>
         <input type="button" onclick="emitRequestStationInfo()" value="Request Station Info">
         <input type="button" onclick="emitSaveStationData()" value="Save Station Data to a File on the Server">
+        <input type="button" onclick="emitRecoverStationData()" value="Recover Station Ids from a File on the Server">
     </body>
 
 
@@ -149,6 +150,11 @@
         function emitSaveStationData(){
             console.log('trigging request to save station data on a file on the server');
             socket.emit('saveStationData',"");
+        }
+        
+        function emitRecoverStationData(){
+            console.log('trigging request to recover station data from a file on the server');
+            socket.emit('recoverStationData',"");
         }
 
         socket.on('connect', function(){

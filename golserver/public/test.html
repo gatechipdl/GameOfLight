@@ -168,7 +168,7 @@
 
         var rippleIntervalId;
         var isRippling = false;
-        var rippleIndex = 0;
+        var rippleIndex = 1;
         var rippleIndexMax = 25;
         var rippleData = {};
         function submitColorRipple(){
@@ -197,7 +197,7 @@
             rippleData["stationId"] = rippleIndex;
             socket.emit('setFiveColors',rippleData);
             rippleIndex++;
-            if(rippleIndex>=rippleIndexMax){
+            if(rippleIndex>rippleIndexMax){
                 rippleIndex = 0;
                 clearInterval(rippleIntervalId);
                 isRippling = false;
