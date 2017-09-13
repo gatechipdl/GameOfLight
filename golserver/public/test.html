@@ -80,6 +80,7 @@
                             <input type="color" id="color4">
                             <input type="color" id="color5">
                             <input type="button" value="send five colors" onclick="submitFiveColors()">
+                            <input type="button" value="color ripple" onclick="submitColorRipple()">
                         </div>
                     </li>
                 </ul>
@@ -164,6 +165,45 @@
             socket.emit('setFiveColors',jData);
         }
 
+
+        var rippleIntervalId;
+        var isRippling = false;
+        var rippleIndex = 0;
+        var rippleIndexMax = 25;
+        var rippleData = {};
+        function submitColorRipple(){
+            if(!isRippling){
+                rippleData["stationId"] = rippleIndex;
+
+                var tColor;
+                rippleData["colors"] = [];
+                tColor = hexToRgb(document.getElementById("color1").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color2").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color3").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color4").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color5").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                
+                isRippling = true;
+                rippleIntervalId = setInterval(colorRipple,200);
+            }
+        }
+
+        function colorRipple(){
+            rippleData["stationId"] = rippleIndex;
+            socket.emit('setFiveColors',rippleData);
+            rippleIndex++;
+            if(rippleIndex>=rippleIndexMax){
+                rippleIndex = 0;
+                clearInterval(rippleIntervalId);
+                isRippling = false;
+            }
+        }
+
         var hueIntervalId;
         var isHueing = false;
         function toggleFiveHueColors(){
@@ -189,7 +229,7 @@
         function clearColors(){
             socket.emit('clearColors',"");
         }
-        
+
         function whiteRipple(){
             whiteBool = !whiteBool;
             if (whiteBool) {
@@ -198,6 +238,7 @@
                 clearInterval(whiteRippleInterval);
             }
         }
+
         function emitWhiteRipple() {
             socket.emit('whiteRipple', counter);
             counter=counter+0.2;

@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3013;
+const baseVersion = 3014;
 
 const express = require('express');
 const app = express();
@@ -370,7 +370,7 @@ function loadStationData(){
             console.dir(data);
             /*
         {
-        socketId:'asdf',
+        stationId:'asdf',
         colors:[
         [255,255,255],
         [255,255,255],
