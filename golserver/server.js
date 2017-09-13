@@ -391,7 +391,7 @@ function loadStationData(){
             ]);
 
             var data64 = base64js.fromByteArray(dataBuffer);
-            socket.broadcast.to(data['socketId']).emit('setFives',data64);
+            socket.broadcast.to(data['stationId']).emit('setFives',data64);
         });
     }
 
