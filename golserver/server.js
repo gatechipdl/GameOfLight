@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3009;
+const baseVersion = 3010;
 
 const express = require('express');
 const app = express();
@@ -190,7 +190,9 @@ function setStationIdListener(socket){
                 //console.log(io.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']]))) );
                 //socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(new Uint16Array([data['stationId']])));
                 var dataBuff16 = new Uint16Array([data['stationId']]);
+                console.log('dataBuff16 ',dataBuff16);
                 var dataBuff8 = new Uint8Array(dataBuff16.buffer);
+                console.log('dataBuff8 ',dataBuff8);
                 socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setStationId',base64js.fromByteArray(dataBuff8));
                 //update station data
 
