@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3014";
+const char* baseVersion = "3015";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -44,6 +44,7 @@ float segmentBris[LED_SEGMENT_COUNT];
 
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
+#define CAPSENSE_TOP 11
 // this is the touch threshold - setting it low makes it more like a proximity trigger
 // default value is 40 for touch
 const int touchThreshold = 40;
@@ -76,6 +77,7 @@ void StrandTest2();
 void StrandTest3();
 void CapSenseTest();
 void CapSenseControl();
+void CapSenseControlTop();
 void connectSocketEventHandler(const char * payload, size_t payloadLength);
 void clearSocketEventHandler(const char * payload, size_t payloadLength);
 void fillSolidSocketEventHandler(const char * payload, size_t payloadLength);
@@ -90,13 +92,14 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength);
 // Operation Variables
 uint8_t operationMode = 4;
 typedef void (*OperationFunction) ();
-OperationFunction operations[6] = {
+OperationFunction operations[7] = {
   SlaveListen,            // 0 - listening
   StrandTest1,            // 1 - rainbow
   StrandTest2,            // 2 - another strandtest
   StrandTest3,            // 3 - another strandtest
   CapSenseTest,           // 4 - cap sense test
-  CapSenseControl         // 5 - cap sense controller
+  CapSenseControl,         // 5 - cap sense controller
+  CapSenseControlTop      // 6 - cap sense controller top
 };
 OperationFunction Operate = operations[operationMode]; //default startup operation mode
 
@@ -160,7 +163,7 @@ void CapSenseTest() {
   
   readCapSenseInputs();
   
-  if (cap_dev[11] < cap_threshold) {
+  if (cap_dev[CAPSENSE_TOP] < cap_threshold) {
     for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
       if (segmentBris[j] < 1.0) {
         segmentBris[j] = segmentBris[j] + briStep2;
@@ -212,69 +215,49 @@ void CapSenseTest() {
 
 void CapSenseControl() {
   
-  readCapSenseInputs();
-  
-  if (cap_dev[11] < cap_threshold) {
-    for (int j = 0; j < LED_SEGMENT_COUNT; j++) {
-      if (segmentBris[j] < 1.0) {
-        segmentBris[j] = segmentBris[j] + briStep2;
-        segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
-        break;
-      }
-    }
-    capSenseLEDUpdate();
-  }
-  for (uint8_t i = 0; i < 12; i++) {
-    cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
-    if (cap_curr[i]) {
-      int bri_or_sat = i / 5;
-      int s = i - 5;
-      switch (bri_or_sat) {
-        case 0:
-          segmentHues[i] = (segmentHues[i] + hueStep);
-          segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
-          break;
-        case 1:
-          segmentSats[s] = (segmentSats[s] + satSteps[s]);
-          satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
-          segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
-          break;
-        default: //case 2
-          for (int j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
-            if (segmentBris[j] > 0.0) {
-              segmentBris[j] = segmentBris[j] - briStep1;
-              segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
-              break;
-            } else {
-              if (j == 0) {
-                for (int k = 0; k < LED_SEGMENT_COUNT; k++) {
-                  segmentSats[k] = 1.0;
-                }
-              }
-            }
-          }
-          break;
-      }
-    }
+  EVERY_N_MILLISECONDS(30) {
+    readCapSenseInputs();
 
+    for (uint8_t i = 0; i < 12; i++) {
+      cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
+      //if there was a state change
+      if(cap_curr[i]!=cap_last[i]){
+        //send the stationId, the id of the cap sensor, and the current state to which it changed
+        webSocket.emit("capSense",("\""+String(stationId, DEC)+","+String(i,DEC)+","+String(cap_curr[i],DEC)+"\"").c_str());
+        if(cap_curr[i]>cap_last[i]){
+          //change was from touched to released
+        }else
+        {
+          //change was from released to touched
+        }
+      }
+      cap_last[i] = cap_curr[i]; //reset cap_last
+    }
+  }
+}
+
+
+void CapSenseControlTop() {
+
+  EVERY_N_MILLISECONDS(30) {
+    readCapSenseInputs();
+    
+    cap_curr[CAPSENSE_TOP] = cap_dev[CAPSENSE_TOP] > cap_threshold; //greater is true is 1 is "pressed"
     //if there was a state change
-    if(cap_curr[i]!=cap_last[i]){
+    if(cap_curr[CAPSENSE_TOP]!=cap_last[CAPSENSE_TOP]){
       //send the stationId, the id of the cap sensor, and the current state to which it changed
-      webSocket.emit("capSense",("\""+String(stationId, DEC)+","+String(i,DEC)+","+String(cap_curr[i],DEC)+"\"").c_str());
-      if(cap_curr[i]>cap_last[i]){
+      webSocket.emit("capSense",("\""+String(stationId, DEC)+","+String(CAPSENSE_TOP,DEC)+","+String(cap_curr[CAPSENSE_TOP],DEC)+"\"").c_str());
+      if(cap_curr[CAPSENSE_TOP]>cap_last[CAPSENSE_TOP]){
         //change was from touched to released
       }else
       {
         //change was from released to touched
-        
       }
     }
-    
-    cap_last[i] = cap_curr[i]; //reset cap_last
+    cap_last[CAPSENSE_TOP] = cap_curr[CAPSENSE_TOP]; //reset cap_last
   }
-
-  capSenseLEDUpdate();
 }
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

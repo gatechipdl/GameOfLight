@@ -59,17 +59,15 @@
                     </li>
                     <li>
                         <button onclick="toggleFiveHueColors();">Toggle Five 'Random' Colors</button>
-                    </li>
-                    <li>
                         <label for="fps">FPS</label>
                         <input id="fps" type="range" min="1" value="30" max="120" step="1" oninput="setFPS(value)">
-                        <div id="fpsval"></div>
+                        <span id="fpsval"></span>
                     </li>
                     <li>
                         <button onclick="clearColors();">Clear the Colors</button>
                     </li>
                     <li>
-                        <button onclick="whiteRipple();">white ripple</button>
+                        <button onclick="whiteRipple();">White Ripple</button>
                     </li>
                     <li>
                         <div>
@@ -100,6 +98,14 @@
             <li>
                 <button onclick="setMode(5);">Set Mode - CapSense Controller</button>
             </li>
+            <li>
+                <button onclick="setMode(6);">Set Mode - CapSense Controller Top Only</button>
+                <ul>
+                    <li>
+                        <button onclick="rainbowSurgeToggle();">Toggle Rainbow Surge</button>
+                    </li>
+                </ul>
+            </li>
 
         </ul>
     </body>
@@ -115,10 +121,6 @@
 
         socket.on('connect', function(){
             socket.emit('subscribe','browsers');
-        });
-
-        socket.on('capSense', function(data){
-            console.dir(data);
         });
 
         function setMode(newMode){
@@ -187,7 +189,7 @@
                 rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
                 tColor = hexToRgb(document.getElementById("color5").value);
                 rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
-                
+
                 isRippling = true;
                 rippleIntervalId = setInterval(colorRipple,200);
             }
@@ -198,7 +200,7 @@
             socket.emit('setFiveColors',rippleData);
             rippleIndex++;
             if(rippleIndex>rippleIndexMax){
-                rippleIndex = 0;
+                rippleIndex = 1;
                 clearInterval(rippleIntervalId);
                 isRippling = false;
             }
@@ -243,6 +245,140 @@
             socket.emit('whiteRipple', counter);
             counter=counter+0.2;
         }
+
+        var rainbowSurgeIntervalId;
+        var isRainbowSurging = false;
+        var surgeData = {};
+        function rainbowSurgeToggle(){
+            if(isRainbowSurging){
+                console.log("stopped surging");
+                clearInterval(rainbowSurgeIntervalId);
+                isRainbowSurging = false;
+            }
+            else{
+                console.log("rainbow surging");
+                rainbowSurgeIntervalId = setInterval(rainbowSurge,10000/fps);
+                isRainbowSurging = true;
+            }
+        }
+        
+        var rainbowSurgeHue = new Array(5).fill(new Array(5).fill(0));
+        var rainbowSurgeBri = new Array(5).fill(new Array(5).fill(0.4));
+        var rainbowSurgeBriSum = 0;
+        var rainbowSurgeBriBuff = new Array(5).fill(new Array(5).fill(0.0));
+        var gHue = 0;
+        function rainbowSurge(){
+            //console.log(gHue);
+            gHue = (gHue+1)%256;
+            //console.log(rainbowSurgeBri);
+            rainbowSurgeBriSum = 0;
+            for(var i=0;i<5;i++){
+                for(var j=0;j<5;j++){
+                    rainbowSurgeBriBuff[i][j] = 0.0;
+                    rainbowSurgeHue[i][j] = (gHue + (i*5+j)*6)%256;//6 is rainbow color density
+//                    console.log(rainbowSurgeBriBuff[i][j]);
+                    //equalize from neighbors using box blur
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][(j-1+5)%5];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][j];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][(j+1)%5];
+                    
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][(j-1+5)%5];
+                    //rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][j];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][(j+1)%5];
+                    
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][(j-1+5)%5];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][j];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][(j+1)%5];
+                    
+                    rainbowSurgeBriBuff[i][j]/=8.0
+//                    console.log(rainbowSurgeBriBuff[i][j]);
+                    
+                    
+                    //pull energy towards where capsense is on
+                    //push energy away if capsense is on neighbor
+                    var multiplier = 1.0;
+                    multiplier*=(1-(1/9)*capSenseArray[(i-1+5)%5][(j-1+5)%5]);
+                    multiplier*=(1-(1/9)*capSenseArray[(i-1+5)%5][j]);
+                    multiplier*=(1-(1/9)*capSenseArray[(i-1+5)%5][(j+1)%5]);
+                    
+                    multiplier*=(1-(1/9)*capSenseArray[i][(j-1+5)%5]);
+                    multiplier*=(1+1*capSenseArray[i][j]);
+                    multiplier*=(1-(1/9)*capSenseArray[i][(j+1)%5]);
+                    
+                    multiplier*=(1-(1/9)*capSenseArray[(i+1)%5][(j-1+5)%5]);
+                    multiplier*=(1-(1/9)*capSenseArray[(i+1)%5][j]);
+                    multiplier*=(1-(1/9)*capSenseArray[(i+1)%5][(j+1)%5]);
+                    
+                    rainbowSurgeBriBuff[i][j]*=multiplier;
+                    rainbowSurgeBriSum+=rainbowSurgeBriBuff[i][j];
+                    
+                }
+            }
+            
+            for(var i=0;i<5;i++){
+                for(var j=0;j<5;j++){
+                    rainbowSurgeBri[i][j] = rainbowSurgeBriBuff[i][j]/rainbowSurgeBriSum; //keep whole system at 1.0 energy level
+                    //rainbowSurgeBriBuff[i][j] = 0.0;
+                }
+            }
+            
+            var tColor;
+//            console.log(rainbowSurgeBri);
+            for(var i=0;i<5;i++){
+                for(var j=0;j<5;j++){
+                    // 1.0/25 = 0.04
+                    //255*0.04^.25 = 114
+                    tColor = HSVtoRGB(rainbowSurgeHue[i][j]/256.0,1.0,Math.pow(rainbowSurgeBri[i][j],0.25));
+                    surgeData["stationId"] = i*5+j;
+                    surgeData["color"] = [
+                        tColor
+                    ];
+                    socket.emit('setAllColors',surgeData);
+                }
+            }
+            
+        }
+
+        var capSenseArray = new Array(5).fill(new Array(5).fill(0));
+        socket.on('capSense', function(data){
+            console.dir(data);
+//            'stationId':cData[0],
+//            'capsenseId':cData[1],
+//            'state':cData[2]
+            if(data['capsenseId']==11){
+                var sid = parseInt(data['stationId']);
+                capSenseArray[Math.floor(sid/5)][sid%5] = parseInt(data['state']);
+            }
+        });
+
+        function HSVtoRGB(h, s, v) {
+            var r, g, b, i, f, p, q, t;
+            if (arguments.length === 1) {
+                s = h.s, v = h.v, h = h.h;
+            }
+            i = Math.floor(h * 6);
+            f = h * 6 - i;
+            p = v * (1 - s);
+            q = v * (1 - f * s);
+            t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v, g = t, b = p; break;
+                case 1: r = q, g = v, b = p; break;
+                case 2: r = p, g = v, b = t; break;
+                case 3: r = p, g = q, b = v; break;
+                case 4: r = t, g = p, b = v; break;
+                case 5: r = v, g = p, b = q; break;
+                         }
+//            return {
+//                r: Math.round(r * 255),
+//                g: Math.round(g * 255),
+//                b: Math.round(b * 255)
+//            };
+            return [Math.round(r * 255),
+                Math.round(g * 255),
+                Math.round(b * 255)];
+        }
+
     </script>
 
 </html>

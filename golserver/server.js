@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3014;
+const baseVersion = 3015;
 
 const express = require('express');
 const app = express();
@@ -99,7 +99,8 @@ var stationData = {
 //    2:'StrandTest2',
 //    3:'StrandTest3'
 //    4:'CapSenseTest',
-//    5:'CapSenseControl'
+//    5:'CapSenseControl',
+//    6:'CapSenseControlTop'
 //}
 
 function loadStationData(){
@@ -434,6 +435,21 @@ function setFiveColorsListener(socket){
     });
 }
 
+function setAllColorsListener(socket){
+    socket.on('setAllColors',function(data){
+        console.dir(data);
+        /*
+        {
+        stationId:'asdf',
+        color:[
+        [255,255,255]
+        }
+        */
+        var theColor = data['color'];
+        FillSolid(data['stationId'],0,45,new CRGB(theColor[0],theColor[1],theColor[2]));
+    });
+}
+
 
 function clearColorsListener(socket){
     socket.on('clearColors',function(){{
@@ -638,6 +654,7 @@ io.on('connection',function(socket){
             checkForUpdatesListener(socket);
             setFiveHueColorsListener(socket);
             setFiveColorsListener(socket);
+            setAllColorsListener(socket);
             clearColorsListener(socket);
         }
     });

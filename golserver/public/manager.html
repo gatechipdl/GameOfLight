@@ -107,7 +107,8 @@
             2:'StrandTest2',
             3:'StrandTest3',
             4:'CapSenseTest',
-            5:'CapSenseControl'
+            5:'CapSenseControl',
+            6:'CapSenseControlTop'
         }
 
 
@@ -237,6 +238,11 @@
                 opt = document.createElement("option");
                 opt.value = "5";
                 opt.textContent = "CapSenseControl";
+                txt.appendChild(opt);
+                
+                opt = document.createElement("option");
+                opt.value = "6";
+                opt.textContent = "CapSenseControlTop";
                 txt.appendChild(opt);
                 
                 txt.selectedIndex = ""+stationData[key]["mode"];
