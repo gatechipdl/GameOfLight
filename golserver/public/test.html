@@ -257,19 +257,20 @@
             }
             else{
                 console.log("rainbow surging");
-                rainbowSurgeIntervalId = setInterval(rainbowSurge,10000/fps);
+                rainbowSurgeIntervalId = setInterval(rainbowSurge,1000/fps);
                 isRainbowSurging = true;
             }
         }
         
-        var rainbowSurgeHue = new Array(5).fill(new Array(5).fill(0));
-        var rainbowSurgeBri = new Array(5).fill(new Array(5).fill(0.4));
+        var rainbowSurgeHue = make2DArray(5,5,0);
+        var rainbowSurgeBri = make2DArray(5,5,0.04);
         var rainbowSurgeBriSum = 0;
-        var rainbowSurgeBriBuff = new Array(5).fill(new Array(5).fill(0.0));
+        var rainbowSurgeBriBuff = make2DArray(5,5,0.0);
         var gHue = 0;
         function rainbowSurge(){
+            
             //console.log(gHue);
-            gHue = (gHue+1)%256;
+            gHue = (gHue+0.5)%256;
             //console.log(rainbowSurgeBri);
             rainbowSurgeBriSum = 0;
             for(var i=0;i<5;i++){
@@ -283,37 +284,39 @@
                     rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][(j+1)%5];
                     
                     rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][(j-1+5)%5];
-                    //rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][j];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][j]*92;
                     rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][(j+1)%5];
                     
                     rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][(j-1+5)%5];
                     rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][j];
                     rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][(j+1)%5];
                     
-                    rainbowSurgeBriBuff[i][j]/=8.0
+                    rainbowSurgeBriBuff[i][j]/=100.0
 //                    console.log(rainbowSurgeBriBuff[i][j]);
                     
                     
                     //pull energy towards where capsense is on
                     //push energy away if capsense is on neighbor
                     var multiplier = 1.0;
-                    multiplier*=(1-(1/9)*capSenseArray[(i-1+5)%5][(j-1+5)%5]);
-                    multiplier*=(1-(1/9)*capSenseArray[(i-1+5)%5][j]);
-                    multiplier*=(1-(1/9)*capSenseArray[(i-1+5)%5][(j+1)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i-1+5)%5][(j-1+5)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i-1+5)%5][j]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i-1+5)%5][(j+1)%5]);
                     
-                    multiplier*=(1-(1/9)*capSenseArray[i][(j-1+5)%5]);
-                    multiplier*=(1+1*capSenseArray[i][j]);
-                    multiplier*=(1-(1/9)*capSenseArray[i][(j+1)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[i][(j-1+5)%5]);
+                    multiplier*=(1+(1.0)*capSenseArray[i][j]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[i][(j+1)%5]);
                     
-                    multiplier*=(1-(1/9)*capSenseArray[(i+1)%5][(j-1+5)%5]);
-                    multiplier*=(1-(1/9)*capSenseArray[(i+1)%5][j]);
-                    multiplier*=(1-(1/9)*capSenseArray[(i+1)%5][(j+1)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i+1)%5][(j-1+5)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i+1)%5][j]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i+1)%5][(j+1)%5]);
                     
-                    rainbowSurgeBriBuff[i][j]*=multiplier;
+                    //console.log(multiplier);
+                    rainbowSurgeBriBuff[i][j]*=multiplier*multiplier;
                     rainbowSurgeBriSum+=rainbowSurgeBriBuff[i][j];
                     
                 }
             }
+            //console.log(rainbowSurgeBriBuff[i]);
             
             for(var i=0;i<5;i++){
                 for(var j=0;j<5;j++){
@@ -323,32 +326,61 @@
             }
             
             var tColor;
-//            console.log(rainbowSurgeBri);
+            
+            
+            
             for(var i=0;i<5;i++){
                 for(var j=0;j<5;j++){
                     // 1.0/25 = 0.04
                     //255*0.04^.25 = 114
-                    tColor = HSVtoRGB(rainbowSurgeHue[i][j]/256.0,1.0,Math.pow(rainbowSurgeBri[i][j],0.25));
-                    surgeData["stationId"] = i*5+j;
-                    surgeData["color"] = [
-                        tColor
-                    ];
+                    tColor = HSVtoRGB(rainbowSurgeHue[i][j]/255.9,1.0,Math.pow(rainbowSurgeBri[i][j],0.4));
+                    surgeData["stationId"] = i*5+j+1;
+                    surgeData["color"] = tColor;
                     socket.emit('setAllColors',surgeData);
                 }
             }
             
         }
-
-        var capSenseArray = new Array(5).fill(new Array(5).fill(0));
+        
+        function make2DArray(sizeX,sizeY,value){
+            var oArr = new Array();
+            for(var i=0;i<sizeX;i++){
+                oArr[i]=new Array();
+                for(var j=0;j<sizeY;j++){
+                    oArr[i][j] = value;
+                }
+            }
+            return oArr;
+        }
+        
+        var capSenseArray = make2DArray(5,5,0);
         socket.on('capSense', function(data){
             console.dir(data);
 //            'stationId':cData[0],
 //            'capsenseId':cData[1],
 //            'state':cData[2]
             if(data['capsenseId']==11){
-                var sid = parseInt(data['stationId']);
-                capSenseArray[Math.floor(sid/5)][sid%5] = parseInt(data['state']);
+                var sid = Math.max(parseInt(data['stationId'])-1,0);
+                console.log(sid);
+                //console.log(capSenseArray);
+                var r = Math.floor(sid/5);
+                var c = sid%5;
+                var val = parseInt(data['state']);
+                for(var i=0;i<5;i++){
+                    for(var j=0;j<5;j++){
+                        if(i==r){
+                            if(j==c){
+                                self.capSenseArray[i][j] = val;
+                            }
+                        }
+                    }
+                }
+                //capSenseArray[Math.floor(sid/5)][sid%5] = parseInt(data['state']);
+                console.log(parseInt(data['state']));
+                //capSenseArray[i][j] = parseInt(data['state']);
+                //setFiveHueColors();
             }
+            console.log(capSenseArray);
         });
 
         function HSVtoRGB(h, s, v) {

@@ -63,12 +63,13 @@
                     <td><input type="number" value="5" min="0", max="32767" onchange="setStationId('60-01-94-10-89-E5',this.value)"></td>
                     <td>
                         <select onchange="setStationMode('60-01-94-10-89-E5',this.value)">
-                            <option value="0">SlaveListen</option>
-                            <option value="1">StrandTest1</option>
-                            <option value="2">StrandTest2</option>
-                            <option value="3">StrandTest3</option>
-                            <option value="4" selected>CapSenseTest</option>
-                            <option value="5">CapSenseControl</option>
+                            <option value=0>SlaveListen</option>
+                            <option value=1>StrandTest1</option>
+                            <option value=2>StrandTest2</option>
+                            <option value=3>StrandTest3</option>
+                            <option value=4 selected>CapSenseTest</option>
+                            <option value=5>CapSenseControl</option>
+                            <option value=6>CapSenseControlTop</option>
                         </select>
                     </td>
                     <td>sdfghj</td>
@@ -211,37 +212,37 @@
                 txt.setAttribute("onchange","setStationMode('"+stationData[key]["mac"]+"',this.value);")
                 var opt;
                 opt = document.createElement("option");
-                opt.value = "0";
+                opt.value = 0;
                 opt.textContent = "SlaveListen";
                 txt.appendChild(opt);
 
                 opt = document.createElement("option");
-                opt.value = "1";
+                opt.value = 1;
                 opt.textContent = "StrandTest1";
                 txt.appendChild(opt);
 
                 opt = document.createElement("option");
-                opt.value = "2";
+                opt.value = 2;
                 opt.textContent = "StrandTest2";
                 txt.appendChild(opt);
 
                 opt = document.createElement("option");
-                opt.value = "3";
+                opt.value = 3;
                 opt.textContent = "StrandTest3";
                 txt.appendChild(opt);
                 
                 opt = document.createElement("option");
-                opt.value = "4";
+                opt.value = 4;
                 opt.textContent = "CapSenseTest";
                 txt.appendChild(opt);
                 
                 opt = document.createElement("option");
-                opt.value = "5";
+                opt.value = 5;
                 opt.textContent = "CapSenseControl";
                 txt.appendChild(opt);
                 
                 opt = document.createElement("option");
-                opt.value = "6";
+                opt.value = 6;
                 opt.textContent = "CapSenseControlTop";
                 txt.appendChild(opt);
                 

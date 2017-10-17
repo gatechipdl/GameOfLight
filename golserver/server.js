@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3015;
+const baseVersion = 3016;
 
 const express = require('express');
 const app = express();
@@ -28,7 +28,7 @@ app.get('/update/base',function(req,res){
     //check version somehow
 
     console.log('a device is requesting an update');
-    console.dir(req.headers);
+    //console.dir(req.headers);
     if(parseInt(req.headers['x-esp8266-version'])!=baseVersion){ //could be <
         var full_path = path.join(__dirname,'/bin/base'+baseVersion+'.bin');
         fs.readFile(full_path,"binary",function(err,file){
@@ -230,12 +230,20 @@ function setStationModeListener(socket){
     });
 }
 
+
+
 function pingStationListener(socket){
     socket.on('pingStation',function(data){
         console.log('pinging mac '+data['mac']+' at station number '+stationData[data['mac']]['id']);
         //var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
         var dataBuffer = new Uint8Array([0,45,0,255,0]); //all green
         socket.broadcast.to([stationData[data['mac']]['socket']]).emit('fillSolid',base64js.fromByteArray(dataBuffer));
+    });
+}
+
+function messageListener(socket){
+    socket.on('message',function(data){
+        console.log('message: '+data);
     });
 }
 
@@ -338,6 +346,7 @@ function recoverStationDataListener(socket){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 function capsenseListener(socket){
     socket.on('capSense',function(data){
+        //console.log('capsense: '+data);
         var cData = data.split(","); //station, cap, state
         var nData = {
             'stationId':cData[0],
@@ -437,7 +446,7 @@ function setFiveColorsListener(socket){
 
 function setAllColorsListener(socket){
     socket.on('setAllColors',function(data){
-        console.dir(data);
+        //console.dir(data);
         /*
         {
         stationId:'asdf',
@@ -592,6 +601,7 @@ io.on('connection',function(socket){
     //ClearAll();
 
     stationDataListener(socket);
+    messageListener(socket);
 
     socket.on('subscribeStation',function(roomName){
         socket.join(roomName);
@@ -716,8 +726,9 @@ function FillSolid(stationId,startIndex,numToFill,ledColor){
             colors[stationId][i].b = ledColor.b;
         }
     }
+    //console.log(ledColor);
     var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
-    io.sockets.to(stationId).emit('fillSolid',dataBuffer);
+    io.sockets.to(stationId).emit('fillSolid',base64js.fromByteArray(dataBuffer));
 }
 
 /*

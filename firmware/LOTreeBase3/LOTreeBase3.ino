@@ -6,7 +6,7 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3015";
+const char* baseVersion = "3016";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -17,6 +17,8 @@ const char* baseVersion = "3015";
 #include <ESP8266httpUpdate.h>
 #include <SocketIoClient.h>
 #include "base64.h"
+
+FASTLED_USING_NAMESPACE
 
 #define LED_DATA_PIN 4
 #define BAUDRATE 115200
@@ -44,6 +46,7 @@ float segmentBris[LED_SEGMENT_COUNT];
 
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
+#define CAPSENSE_COUNT 12
 #define CAPSENSE_TOP 11
 // this is the touch threshold - setting it low makes it more like a proximity trigger
 // default value is 40 for touch
@@ -51,11 +54,11 @@ const int touchThreshold = 40;
 // this is the release threshold - must ALWAYS be smaller than the touch threshold
 // default value is 20 for touch
 const int releaseThreshold = 20;
-int cap_dev[12];
+int cap_dev[CAPSENSE_COUNT];
 int cap_threshold = 2;
 int cap_sum = 0;
-bool cap_last[12]; //last state
-bool cap_curr[12]; //curr state
+bool cap_last[CAPSENSE_COUNT]; //last state
+bool cap_curr[CAPSENSE_COUNT]; //curr state
 
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
@@ -173,7 +176,7 @@ void CapSenseTest() {
     }
     capSenseLEDUpdate();
   }
-  for (uint8_t i = 0; i < 12; i++) {
+  for (uint8_t i = 0; i < CAPSENSE_COUNT; i++) {
     cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
     if (cap_curr[i]) {
       int bri_or_sat = i / 5;
@@ -215,11 +218,11 @@ void CapSenseTest() {
 
 void CapSenseControl() {
   
-  EVERY_N_MILLISECONDS(30) {
+  EVERY_N_MILLISECONDS(50) {
     readCapSenseInputs();
 
-    for (uint8_t i = 0; i < 12; i++) {
-      cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
+    for (uint8_t i = 0; i < CAPSENSE_COUNT; i++) {
+      cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true if 1 is "pressed"
       //if there was a state change
       if(cap_curr[i]!=cap_last[i]){
         //send the stationId, the id of the cap sensor, and the current state to which it changed
@@ -239,10 +242,10 @@ void CapSenseControl() {
 
 void CapSenseControlTop() {
 
-  EVERY_N_MILLISECONDS(30) {
+  EVERY_N_MILLISECONDS(50) {
     readCapSenseInputs();
     
-    cap_curr[CAPSENSE_TOP] = cap_dev[CAPSENSE_TOP] > cap_threshold; //greater is true is 1 is "pressed"
+    cap_curr[CAPSENSE_TOP] = cap_dev[CAPSENSE_TOP] > cap_threshold; //greater is true if 1 is "pressed"
     //if there was a state change
     if(cap_curr[CAPSENSE_TOP]!=cap_last[CAPSENSE_TOP]){
       //send the stationId, the id of the cap sensor, and the current state to which it changed
@@ -252,9 +255,13 @@ void CapSenseControlTop() {
       }else
       {
         //change was from released to touched
-      }
     }
     cap_last[CAPSENSE_TOP] = cap_curr[CAPSENSE_TOP]; //reset cap_last
+  }
+
+//  EVERY_N_MILLISECONDS(1000) {
+//    webSocket.emit("message",("\""+String(stationId, DEC)+","+String(cap_last[CAPSENSE_TOP],DEC)+","+String(cap_curr[CAPSENSE_TOP],DEC)+"\"").c_str());
+//      }
   }
 }
 
@@ -352,17 +359,25 @@ void clearSocketEventHandler(const char * payload, size_t payloadLength) {
 }
 
 void fillSolidSocketEventHandler(const char * payload, size_t payloadLength) {
+  
   //Serial.printf("got fillSolid message: %s\n", payload);
-
   unsigned int output_length = decode_base64_length((unsigned char*)payload);
   unsigned char binPayload[output_length];
   decode_base64((unsigned char*)payload, binPayload);
 
+//  webSocket.emit("message",("\""+String(stationId, DEC)+": ["+
+//  String(binPayload[0],DEC)+","+
+//  String(binPayload[1],DEC)+","+
+//  String(binPayload[2],DEC)+","+
+//  String(binPayload[3],DEC)+","+
+//  String(binPayload[4],DEC)+"]"+
+//  "\"").c_str());
+
   //startIndex
   //numToFill,
   //ledColor (r,g,b)
-  fill_solid(leds + (uint8_t)binPayload[0], (uint8_t)binPayload[1], CRGB((uint8_t)binPayload[2], (uint8_t)binPayload[3], (uint8_t)binPayload[4]));
-
+  fill_solid(leds + (uint8_t)binPayload[0], (uint8_t)binPayload[1], CRGB((uint8_t)binPayload[2], (uint8_t)binPayload[4], (uint8_t)binPayload[3]));
+  //fill_solid(leds+0,45,CRGB(0,0,255));
   FastLED.show();//doRedraw = true;
 }
 
@@ -378,8 +393,8 @@ void setColorSocketEventHandler(const char * payload, size_t payloadLength) {
 
   int first = (uint8_t)binPayload[0];
   leds[first].r = (uint8_t)binPayload[1];
-  leds[first].g = (uint8_t)binPayload[2];
-  leds[first].b = (uint8_t)binPayload[3];
+  leds[first].g = (uint8_t)binPayload[3];
+  leds[first].b = (uint8_t)binPayload[2];
 
   FastLED.show();//doRedraw = true;
 }
@@ -462,7 +477,7 @@ void readCapSenseInputs() {
   MPR121.updateBaselineData();
   MPR121.updateFilteredData();
   cap_sum = 0;
-  for (i = 0; i < 12; i++) {    // 13 value pairs
+  for (i = 0; i < CAPSENSE_COUNT; i++) {    // 12 value pairs
     cap_dev[i] = MPR121.getBaselineData(i) - MPR121.getFilteredData(i);
     Serial.print(cap_dev[i]);
     Serial.print(" ");
