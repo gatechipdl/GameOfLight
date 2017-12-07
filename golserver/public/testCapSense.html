@@ -1,0 +1,803 @@
+<!doctype html>
+
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <title>Light Orchard Tester</title>
+        <meta name="description" content="test controls for the Light Orchard installation">
+        <script src="/socket.io/socket.io.js"></script>
+
+        <style>
+
+            body {
+                font-family: monospace;
+                color: white;
+                font-size: 15px;
+                background: black;
+                letter-spacing: 0.1em;
+                //background: url(images/Game%20of%20Light_stubbins.jpg);
+                background-size: cover;
+                background-position: top center;
+            }
+
+            li {
+                list-style: none;
+            }
+
+            button {
+                font-family: inherit;
+                border: none;
+                background: rgba(255, 255, 255, 0.15);
+                padding: 0.25em;
+                color: white;
+                margin: 0 0 0.75em 0;
+                cursor: pointer;
+                font-size: inherit;
+            }
+
+            button:hover {
+                background: rgba(255, 255, 255, 0.25);
+            }
+            button:active {
+                background: rgba(255, 255, 255, 0.5);
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <ul>
+            <li>
+                <button onclick="emitCheckForUpdates()">Force a Request to Check for Firmware Updates</button>
+            </li>
+            <li>
+                <button onclick="setMode(0);">Set Mode - Slave Listener</button>
+                <ul>
+                    <li>
+                        <button onclick="setMuricaColors();">MURICA</button>
+                    </li>
+                    <li>
+                        <button onclick="setFiveHueColors();">Set Five 'Random' Colors</button>
+                    </li>
+                    <li>
+                        <button onclick="toggleFiveHueColors();">Toggle Five 'Random' Colors</button>
+                        <label for="fps">FPS</label>
+                        <input id="fps" type="range" min="1" value="30" max="120" step="1" oninput="setFPS(value)">
+                        <span id="fpsval"></span>
+                    </li>
+                    <li>
+                        <button onclick="clearColors();">Clear the Colors</button>
+                    </li>
+                    <li>
+                        <button onclick="whiteRipple();">White Ripple</button>
+                    </li>
+                    <li>
+                        <div>
+                            <input type="number" value="0" min="0", max="32767" id="fiveColorStationId">
+                            <input type="color" id="color1">
+                            <input type="color" id="color2">
+                            <input type="color" id="color3">
+                            <input type="color" id="color4">
+                            <input type="color" id="color5">
+                            <input type="button" value="send five colors" onclick="submitFiveColors()">
+                            <input type="button" value="color ripple" onclick="submitColorRipple()">
+                        </div>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <button onclick="setMode(1);">Set Mode - Rainbow Strand Test 1</button>
+            </li>
+            <li>
+                <button onclick="setMode(2);">Set Mode - Sinlon Strand Test 2</button>
+            </li>
+            <li>
+                <button onclick="setMode(3);">Set Mode - Jungle Strand Test 3</button>
+            </li>
+            <li>
+                <button onclick="setMode(4);">Set Mode - CapSense Test</button>
+            </li>
+            <li>
+                <button onclick="setMode(5);">Set Mode - CapSense Controller</button>
+            </li>
+            <li>
+                <button onclick="doLayerPaint=!doLayerPaint;">Toggle LayerPaint</button>
+            </li>
+            <li>
+                <button onclick="doCapTest=!doCapTest;">Toggle doCapTest</button>
+            </li>
+            <li>
+                <button onclick="setMode(6);">Set Mode - CapSense Controller Top Only</button>
+                <ul>
+                    <li>
+                        <button onclick="rainbowSurgeToggle();">Toggle Rainbow Surge</button>
+                    </li>
+                </ul>
+            </li>
+
+        </ul>
+    </body>
+
+
+    <script>
+        var socket = io.connect('/');
+        var whiteBool = false;
+        var randBool = false;
+        var counter = 0;
+        var whiteRippleInterval, randomInterval;
+        var fps = 30;
+
+        socket.on('connect', function(){
+            socket.emit('subscribe','browsers');
+        });
+
+        function setMode(newMode){
+            console.log('setting new mode');
+            socket.emit('setModeRaw',newMode);
+        }
+
+        function emitCheckForUpdates(){
+            socket.emit('checkForUpdates',"");
+        }
+
+
+        function setFiveHueColors(){
+            socket.emit('setFiveHueColors',"");
+        }
+
+        //https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function submitFiveColors(){
+            var jData = {};
+            jData["stationId"] = document.getElementById("fiveColorStationId").value
+
+            var tColor;
+            jData["colors"] = [];
+            tColor = hexToRgb(document.getElementById("color1").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color2").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color3").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color4").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            tColor = hexToRgb(document.getElementById("color5").value);
+            jData["colors"].push([tColor.r,tColor.g,tColor.b]);
+            console.dir(jData);
+            socket.emit('setFiveColors',jData);
+        }
+
+        var rippleIntervalId;
+        var isRippling = false;
+        var i = 0;
+        var rippleIndex = 1;
+        var rippleIndexMax = 25;
+        var rippleData = {};        
+        
+        function setMuricaColors(){
+            
+            setTimeout(function(){
+                colorSweepCluster([255,0,0],500,5);//red
+            },0);
+            
+            setTimeout(function(){
+                colorSweepCluster([255,255,255],500,5);//white
+            },1000);
+            
+            setTimeout(function(){
+                colorSweepCluster([0,0,255],500,5);//blue
+            },2000);
+            
+            
+            var tOff = 3000;
+            var tInt = 200;
+            setTimeout(function(){
+                colorsSweepCluster(
+                    [[0,0,0],
+                     [0,0,0],
+                     [0,0,0],
+                     [0,0,0],
+                     [0,0,0]],
+                    500,5);
+            },tOff);
+            
+            setTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [0,0,0],
+                     [0,0,0],
+                     [0,0,0],
+                     [0,0,0]],
+                    500,5);
+            },tOff+tInt);
+            
+            setTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [0,0,0],
+                     [0,0,0],
+                     [0,0,0]],
+                    500,5);
+            },tOff+tInt*2);
+            
+            setTimeout(function(){
+                 colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [0,0,255],
+                     [0,0,0],
+                     [0,0,0]],
+                    500,5);
+            },tOff+tInt*3);
+            
+            setTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [0,0,255],
+                     [255,255,255],
+                     [0,0,0]],
+                    500,5);
+            },tOff+tInt*4);
+            
+            setTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [0,0,255],
+                     [255,255,255],
+                     [255,0,255]],
+                    500,5);
+            },tOff+tInt*5);
+            
+            var tBase = tOff+tInt*5;
+            for(var i=0;i<40;i++){ 
+                iteratedTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [255,255,255],
+                     [0,0,255],
+                     [255,0,0]],
+                    tInt,5);
+                },tBase+(4*i+1)*tInt);
+                iteratedTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [0,0,255],
+                     [255,255,255],
+                     [255,0,0]],
+                    tInt,5);
+                },tBase+(4*i+2)*tInt);
+                iteratedTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [0,0,255],
+                     [255,255,255],
+                     [255,255,255],
+                     [255,0,0]],
+                    tInt,5);
+                },tBase+(4*i+3)*tInt);
+                iteratedTimeout(function(){
+                colorsSweepCluster(
+                    [[255,0,0],
+                     [255,255,255],
+                     [0,0,255],
+                     [255,255,255],
+                     [255,0,0]],
+                    tInt,5);
+                },tBase+(4*i+4)*tInt);
+            }
+           
+            
+//            if(!isRippling){
+//                rippleData["stationId"] = rippleIndex;
+//
+//                var tColor;
+//                
+//                var id = setInterval(flagWave,1250);
+//                
+//                function flagWave(){
+//                    if (i == 0){                
+//                        rippleData["colors"] = [ Array(255,0,0),Array(255,0,0),Array(255,0,0),Array(255,0,0),Array(255,0,0)];
+// 
+//                        //alert(i);
+//                        rippleIntervalId = setInterval(colorRipple,50);
+//                        isRippling = true;
+//                        i++;
+//                        
+//                    } else if (i == 1){
+//                        rippleData["colors"] = [ Array(255,255,255),Array(255,255,255),Array(255,255,255),Array(255,255,255),Array(255,255,255)];
+//                        
+//                        //alert(i);
+//                        rippleIntervalId = setInterval(colorRipple,50);
+//                        isRippling = true;
+//                        i++;
+//                        
+//                    } else if (i == 2){
+//                        rippleData["colors"] = [ Array(0,0,255),Array(0,0,255),Array(0,0,255),Array(0,0,255),Array(0,0,255)];
+//                        
+//                        //alert(i);
+//                        rippleIntervalId = setInterval(colorRipple,50);
+//                        isRippling = true;
+//                        i++;
+//                        
+//                    } else {
+//                        
+//                        //alert("done");
+//                        clearInterval(id);
+//                        clearInterval(rippleIntervalId);
+//                        i = 0;
+//                        //isRippling = false;
+//                    }
+//                    
+//                 }
+//            }
+        }
+        
+        function iteratedTimeout(myFunction,myMillis){
+            setTimeout(myFunction,myMillis);
+        }
+        
+
+        function submitColorRipple(){
+            if(!isRippling){
+                rippleData["stationId"] = rippleIndex;
+
+                var tColor;
+                rippleData["colors"] = [];
+                tColor = hexToRgb(document.getElementById("color1").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color2").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color3").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color4").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+                tColor = hexToRgb(document.getElementById("color5").value);
+                rippleData["colors"].push([tColor.r,tColor.g,tColor.b]);
+
+                isRippling = true;
+                rippleIntervalId = setInterval(colorRipple,200);
+            }
+        }
+
+        function colorRipple(){
+            rippleData["stationId"] = rippleIndex;
+            socket.emit('setFiveColors',rippleData);
+            rippleIndex++;
+            if(rippleIndex>rippleIndexMax){
+                rippleIndex = 1;
+                clearInterval(rippleIntervalId);
+                isRippling = false;
+            }
+        }
+        
+        
+        
+        
+        /*
+         * assumes going through id 1-25; 1 color per station
+         */
+        function colorSweep(theColor,theMillis){
+            console.log('setting colorSweep for '+theColor);
+            for(var i=0;i<25;i++){
+                colorSweepTimeout(theColor,theMillis*i,i);
+            }
+        }
+        function colorSweepCluster(theColor,theMillis,clusterSize){
+            var clusterCount = Math.floor(25/clusterSize);
+            for(var i=0;i<clusterCount;i++){
+                for(var j=0;j<clusterSize;j++){
+                    colorSweepTimeout(theColor,theMillis*i,i*clusterSize+j);
+                }
+            }
+        }
+        function colorSweepTimeout(theColor,theMillis,i){
+            setTimeout(
+                    function(){
+                        socket.emit('setTreeColor',{'stationId':(i+1),'color':theColor});
+                },theMillis);
+        }
+        
+        
+        
+        /*
+         * assumes going through id 1-25; 5 colors per station
+         */
+        function colorsSweep(theColors,theMillis){
+            for(var i=0;i<25;i++){
+                colorsSweepTimeout(theColors,theMillis*i,i);
+            }
+        }
+        function colorsSweepCluster(theColors,theMillis,clusterSize){
+            var clusterCount = Math.floor(25/clusterSize);
+            for(var i=0;i<clusterCount;i++){
+                for(var j=0;j<clusterSize;j++){
+                    colorsSweepTimeout(theColors,theMillis*i,i*clusterSize+j);
+                }
+            }
+        }
+        function colorsSweepTimeout(theColors,theMillis,i){
+            setTimeout(
+                    function(){
+                        //console.log('sending color to id '+(i+1)+' with color '+theColor);
+                        socket.emit('setFiveColors',{'stationId':(i+1),'colors':theColors});
+                },theMillis);
+        }
+        
+        
+        
+        var doPew = false;
+        
+        myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+        socket.on('capSense',function(data){
+            if(doPew){
+                //bottom 0/5,1/6,2/7,3/8,4/9 top
+
+                //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+                if(parseInt(data['state'])==0){
+                    myColors[parseInt(data['capsenseId']%5)] = [255,0,0];
+                }
+                else{
+                    myColors[parseInt(data['capsenseId']%5)] = [0,0,255];
+                }
+
+                colorsSweepCluster(myColors,100,5); //colors, time between clusters, cluster size
+            }
+        });
+        
+        var doLayerPaint = false;
+        
+        
+        var doCapTest=true;
+        myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+        const LED_SEGMENT_COUNT = 5;
+        var segmentHues=[0.0,0.0,0.0,0.0,0.0];
+        var segmentSats=[0.0,0.0,0.0,0.0,0.0];
+        var hueStep = 0.002;
+        var satStepMag = 0.003;
+        var satSteps=[0.0,0.0,0.0,0.0,0.0];
+        var briStep1 = 0.03;
+        var briStep2 = 0.007;
+        var segmentBris=[0.0,0.0,0.0,0.0,0.0];
+        
+        const CAPSENSE_COUNT = 12;
+        const CAPSENSE_TOP = 11;
+        var cap_dev=[0,0,0,0,0,0,0,0,0,0,0,0];
+        var cap_threshold = 0.9; //2
+        var cap_sum = 0;
+        var cap_last=[0,0,0,0,0,0,0,0,0,0,0,0]; //last state
+        var cap_curr=[0,0,0,0,0,0,0,0,0,0,0,0]; //curr state
+        
+        socket.on('capSense',function(data){
+            if(doLayerPaint){
+                //bottom 0/5,1/6,2/7,3/8,4/9 top
+
+                //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+                if(parseInt(data['state'])==0){
+                    myColors[parseInt(data['capsenseId']%5)] = [255,0,0];
+                }
+                else{
+                    myColors[parseInt(data['capsenseId']%5)] = [0,0,255];
+                }
+
+                colorsSweepCluster(myColors,100,5);
+            }
+            
+            if(doCapTest){
+                
+                cap_curr[parseInt(data['capsenseId'])]=parseInt(data['state']);
+                
+            }
+        });
+        
+        setInterval(doCapTestInterval,10);
+        setInterval(capSenseLEDUpdate,500);
+        
+        function doCapTestInterval(){
+            if (cap_dev[CAPSENSE_TOP] < cap_threshold) {
+                for (var j = 0; j < LED_SEGMENT_COUNT; j++) {
+                  if (segmentBris[j] < 1.0) {
+                    segmentBris[j] = segmentBris[j] + briStep2;
+                    segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
+                    break;
+                  }
+                }
+                //capSenseLEDUpdate();
+              }
+              for (var i = 0; i < CAPSENSE_COUNT; i++) {
+                cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
+                if (cap_curr[i]) {
+                  var bri_or_sat = i / 5;
+                  var s = i - 5;
+                  switch (bri_or_sat) {
+                    case 0:
+                      segmentHues[i] = (segmentHues[i] + hueStep);
+                      segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
+                      break;
+                    case 1:
+                      segmentSats[s] = (segmentSats[s] + satSteps[s]);
+                      satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
+                      segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
+                      break;
+                    default: //case 2
+                      for (var j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
+                        if (segmentBris[j] > 0.0) {
+                          segmentBris[j] = segmentBris[j] - briStep1;
+                          segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
+                          break;
+                        } else {
+                          if (j == 0) {
+                            for (var k = 0; k < LED_SEGMENT_COUNT; k++) {
+                              segmentSats[k] = 1.0;
+                            }
+                          }
+                        }
+                      }
+                      break;
+                  }
+                }
+
+                cap_last[i] = cap_curr[i]; //reset cap_last
+              }
+            //capSenseLEDUpdate();
+        }
+        
+        function capSenseLEDUpdate(){
+            for(var i=0;i<5;i++){
+                console.log([segmentHues[i],segmentSats[i],segmentBris[i]]);
+                var tColor = HSVtoRGB(segmentHues[i],segmentSats[i],segmentBris[i],1.0);
+                myColors[i]=tColor;
+            }
+            colorsSweepCluster(myColors,1,5);
+        }
+        
+        
+
+        var hueIntervalId;
+        var isHueing = false;
+        function toggleFiveHueColors(){
+            if(isHueing){
+                clearInterval(hueIntervalId);
+                isHueing = false;
+            }
+            else{
+                hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+                isHueing = true;
+            }
+        }
+
+        function setFPS(newFPS){
+            fps = newFPS;
+            document.getElementById("fpsval").innerHTML = fps+' fps';
+            if(isHueing){
+                clearInterval(hueIntervalId);
+                hueIntervalId = setInterval(setFiveHueColors,1000/fps);
+            }
+        }
+
+        function clearColors(){
+            socket.emit('clearColors',"");
+        }
+
+        function whiteRipple(){
+            whiteBool = !whiteBool;
+            if (whiteBool) {
+                whiteRippleInterval = setInterval(emitWhiteRipple,20);
+            } else {
+                clearInterval(whiteRippleInterval);
+            }
+        }
+
+        function emitWhiteRipple() {
+            socket.emit('whiteRipple', counter);
+            counter=counter+0.2;
+        }
+
+        var rainbowSurgeIntervalId;
+        var isRainbowSurging = false;
+        var surgeData = {};
+        function rainbowSurgeToggle(){
+            if(isRainbowSurging){
+                console.log("stopped surging");
+                clearInterval(rainbowSurgeIntervalId);
+                isRainbowSurging = false;
+            }
+            else{
+                console.log("rainbow surging");
+                rainbowSurgeIntervalId = setInterval(rainbowSurge,1000/fps);
+                isRainbowSurging = true;
+            }
+        }
+        
+        var rainbowSurgeHue = make2DArray(5,5,0);
+        var rainbowSurgeBri = make2DArray(5,5,0.04);
+        var rainbowSurgeBriSum = 0;
+        var rainbowSurgeBriBuff = make2DArray(5,5,0.0);
+        var gHue = 0;
+        function rainbowSurge(){
+            
+            //console.log(gHue);
+            gHue = (gHue+0.5)%256;
+            //console.log(rainbowSurgeBri);
+            rainbowSurgeBriSum = 0;
+            for(var i=0;i<5;i++){
+                for(var j=0;j<5;j++){
+                    rainbowSurgeBriBuff[i][j] = 0.0;
+                    rainbowSurgeHue[i][j] = (gHue + (i*5+j)*6)%256;//6 is rainbow color density
+//                    console.log(rainbowSurgeBriBuff[i][j]);
+                    //equalize from neighbors using box blur
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][(j-1+5)%5];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][j];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i-1+5)%5][(j+1)%5];
+                    
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][(j-1+5)%5];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][j]*92;
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[i][(j+1)%5];
+                    
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][(j-1+5)%5];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][j];
+                    rainbowSurgeBriBuff[i][j] += rainbowSurgeBri[(i+1)%5][(j+1)%5];
+                    
+                    rainbowSurgeBriBuff[i][j]/=100.0
+//                    console.log(rainbowSurgeBriBuff[i][j]);
+                    
+                    
+                    //pull energy towards where capsense is on
+                    //push energy away if capsense is on neighbor
+                    var multiplier = 1.0;
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i-1+5)%5][(j-1+5)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i-1+5)%5][j]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i-1+5)%5][(j+1)%5]);
+                    
+                    multiplier*=(1-(4/9.0)*capSenseArray[i][(j-1+5)%5]);
+                    multiplier*=(1+(1.0)*capSenseArray[i][j]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[i][(j+1)%5]);
+                    
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i+1)%5][(j-1+5)%5]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i+1)%5][j]);
+                    multiplier*=(1-(4/9.0)*capSenseArray[(i+1)%5][(j+1)%5]);
+                    
+                    //console.log(multiplier);
+                    rainbowSurgeBriBuff[i][j]*=multiplier*multiplier;
+                    rainbowSurgeBriSum+=rainbowSurgeBriBuff[i][j];
+                    
+                }
+            }
+            //console.log(rainbowSurgeBriBuff[i]);
+            
+            for(var i=0;i<5;i++){
+                for(var j=0;j<5;j++){
+                    rainbowSurgeBri[i][j] = rainbowSurgeBriBuff[i][j]/rainbowSurgeBriSum; //keep whole system at 1.0 energy level
+                    //rainbowSurgeBriBuff[i][j] = 0.0;
+                }
+            }
+            
+            var tColor;
+            
+            
+            
+            for(var i=0;i<5;i++){
+                for(var j=0;j<5;j++){
+                    // 1.0/25 = 0.04
+                    //255*0.04^.25 = 114
+                    tColor = HSVtoRGB(rainbowSurgeHue[i][j]/255.9,1.0,Math.pow(rainbowSurgeBri[i][j],0.4));
+                    surgeData["stationId"] = i*5+j+1;
+                    surgeData["color"] = tColor;
+                    socket.emit('setAllColors',surgeData);
+                }
+            }
+            
+        }
+        
+        function make2DArray(sizeX,sizeY,value){
+            var oArr = new Array();
+            for(var i=0;i<sizeX;i++){
+                oArr[i]=new Array();
+                for(var j=0;j<sizeY;j++){
+                    oArr[i][j] = value;
+                }
+            }
+            return oArr;
+        }
+        
+        
+        
+        var capSenseArray = make2DArray(5,5,0);
+        socket.on('capSense', function(data){
+            console.dir(data);
+//            'stationId':cData[0],
+//            'capsenseId':cData[1],
+//            'state':cData[2]
+            if(data['capsenseId']==11){
+                var sid = Math.max(parseInt(data['stationId'])-1,0);
+                console.log(sid);
+                //console.log(capSenseArray);
+                var r = Math.floor(sid/5);
+                var c = sid%5;
+                var val = parseInt(data['state']);
+                for(var i=0;i<5;i++){
+                    for(var j=0;j<5;j++){
+                        if(i==r){
+                            if(j==c){
+                                self.capSenseArray[i][j] = val;
+                            }
+                        }
+                    }
+                }
+                //capSenseArray[Math.floor(sid/5)][sid%5] = parseInt(data['state']);
+                console.log(parseInt(data['state']));
+                //capSenseArray[i][j] = parseInt(data['state']);
+                //setFiveHueColors();
+            }
+            console.log(capSenseArray);
+        });
+
+        function HSVtoRGB(h, s, v) {
+            var r, g, b, i, f, p, q, t;
+            if (arguments.length === 1) {
+                s = h.s, v = h.v, h = h.h;
+            }
+            i = Math.floor(h * 6);
+            f = h * 6 - i;
+            p = v * (1 - s);
+            q = v * (1 - f * s);
+            t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v, g = t, b = p; break;
+                case 1: r = q, g = v, b = p; break;
+                case 2: r = p, g = v, b = t; break;
+                case 3: r = p, g = q, b = v; break;
+                case 4: r = t, g = p, b = v; break;
+                case 5: r = v, g = p, b = q; break;
+                         }
+//            return {
+//                r: Math.round(r * 255),
+//                g: Math.round(g * 255),
+//                b: Math.round(b * 255)
+//            };
+            return [Math.round(r * 255),
+                Math.round(g * 255),
+                Math.round(b * 255)];
+        }
+
+    </script>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

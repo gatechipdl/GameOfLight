@@ -414,6 +414,34 @@ function setFiveHueColorsListener(socket){
     });
 }
 
+/*
+should include tree id and 1 color
+*/
+function setTreeColorListener(socket){
+    socket.on('setTreeColor',function(data){
+        console.dir(data);
+        /*
+        {
+        stationId:'asdf',
+        color:[255,255,255]
+        }
+        */
+        var theColor = data['color'];
+
+        var dataBuffer = new Uint8Array([
+            theColor[0],theColor[1],theColor[2],
+            theColor[0],theColor[1],theColor[2],
+            theColor[0],theColor[1],theColor[2],
+            theColor[0],theColor[1],theColor[2],
+            theColor[0],theColor[1],theColor[2]
+        ]);
+
+        var data64 = base64js.fromByteArray(dataBuffer);
+        socket.broadcast.to(data['stationId']).emit('setFives',data64);
+    });
+}
+
+
 function setFiveColorsListener(socket){
     socket.on('setFiveColors',function(data){
         console.dir(data);
@@ -663,6 +691,7 @@ io.on('connection',function(socket){
             setModeRawListener(socket);
             checkForUpdatesListener(socket);
             setFiveHueColorsListener(socket);
+            setTreeColorListener(socket);
             setFiveColorsListener(socket);
             setAllColorsListener(socket);
             clearColorsListener(socket);
