@@ -481,7 +481,7 @@
                 }
 
                 colorsSweepCluster(myColors,100,5); //colors, time between clusters, cluster size
-                
+
             } else if(doLayerPaint) {
                 //bottom 0/5,1/6,2/7,3/8,4/9 top
 
@@ -489,7 +489,6 @@
                 var layer = parseInt(data['capsenseId']%5);
                 console.log('layer:', layer);
                 shiftLayerHue(layer);
-                capSenseLEDUpdate();
 
                 // if(parseInt(data['state'])==0){
                 //     myColors[parseInt(data['capsenseId']%5)] = [255,0,0];
@@ -509,7 +508,7 @@
         });
         
         //setInterval(doCapTestInterval,10);
-        //setInterval(capSenseLEDUpdate,500);
+        setInterval(capSenseLayerHueUpdate,100);
 
         function shiftLayerHue(layer) {
             segmentHues[i] = segmentHues[i] + hueStep;
@@ -563,6 +562,12 @@
                 cap_last[i] = cap_curr[i]; //reset cap_last
               }
             //capSenseLEDUpdate();
+        }
+
+        function capSenseLayerHueUpdate() {
+            if (LayerPaint) {
+                capSenseLEDUpdate();        
+            }
         }
         
         function capSenseLEDUpdate(){
