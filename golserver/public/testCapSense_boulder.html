@@ -442,21 +442,7 @@
         var doPew = false;
         
         myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
-        socket.on('capSense',function(data){
-            if(doPew){
-                //bottom 0/5,1/6,2/7,3/8,4/9 top
-
-                //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
-                if(parseInt(data['state'])==0){
-                    myColors[parseInt(data['capsenseId']%5)] = [255,0,0];
-                }
-                else{
-                    myColors[parseInt(data['capsenseId']%5)] = [0,0,255];
-                }
-
-                colorsSweepCluster(myColors,100,5); //colors, time between clusters, cluster size
-            }
-        });
+        
         
         var doLayerPaint = false;
         
@@ -483,7 +469,20 @@
         
         socket.on('capSense',function(data){
             console.log('capSense event');
-            if(doLayerPaint){
+            if(doPew){
+                //bottom 0/5,1/6,2/7,3/8,4/9 top
+
+                //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+                if(parseInt(data['state'])==0){
+                    myColors[parseInt(data['capsenseId']%5)] = [255,0,0];
+                }
+                else{
+                    myColors[parseInt(data['capsenseId']%5)] = [0,0,255];
+                }
+
+                colorsSweepCluster(myColors,100,5); //colors, time between clusters, cluster size
+                
+            } else if(doLayerPaint) {
                 //bottom 0/5,1/6,2/7,3/8,4/9 top
 
                 //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
@@ -728,34 +727,34 @@
         
         
         var capSenseArray = make2DArray(5,5,0);
-        socket.on('capSense', function(data){
-            console.dir(data);
-//            'stationId':cData[0],
-//            'capsenseId':cData[1],
-//            'state':cData[2]
-            if(data['capsenseId']==11){
-                var sid = Math.max(parseInt(data['stationId'])-1,0);
-                console.log(sid);
-                //console.log(capSenseArray);
-                var r = Math.floor(sid/5);
-                var c = sid%5;
-                var val = parseInt(data['state']);
-                for(var i=0;i<5;i++){
-                    for(var j=0;j<5;j++){
-                        if(i==r){
-                            if(j==c){
-                                self.capSenseArray[i][j] = val;
-                            }
-                        }
-                    }
-                }
-                //capSenseArray[Math.floor(sid/5)][sid%5] = parseInt(data['state']);
-                console.log(parseInt(data['state']));
-                //capSenseArray[i][j] = parseInt(data['state']);
-                //setFiveHueColors();
-            }
-            console.log(capSenseArray);
-        });
+//         socket.on('capSense', function(data){
+//             console.dir(data);
+// //            'stationId':cData[0],
+// //            'capsenseId':cData[1],
+// //            'state':cData[2]
+//             if(data['capsenseId']==11){
+//                 var sid = Math.max(parseInt(data['stationId'])-1,0);
+//                 console.log(sid);
+//                 //console.log(capSenseArray);
+//                 var r = Math.floor(sid/5);
+//                 var c = sid%5;
+//                 var val = parseInt(data['state']);
+//                 for(var i=0;i<5;i++){
+//                     for(var j=0;j<5;j++){
+//                         if(i==r){
+//                             if(j==c){
+//                                 self.capSenseArray[i][j] = val;
+//                             }
+//                         }
+//                     }
+//                 }
+//                 //capSenseArray[Math.floor(sid/5)][sid%5] = parseInt(data['state']);
+//                 console.log(parseInt(data['state']));
+//                 //capSenseArray[i][j] = parseInt(data['state']);
+//                 //setFiveHueColors();
+//             }
+//             console.log(capSenseArray);
+//         });
 
         function HSVtoRGB(h, s, v) {
             var r, g, b, i, f, p, q, t;
