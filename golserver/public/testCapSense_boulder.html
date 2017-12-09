@@ -471,7 +471,7 @@
         var satSteps=[0.0,0.0,0.0,0.0,0.0];
         var briStep1 = 0.03;
         var briStep2 = 0.007;
-        var segmentBris=[0.0,0.0,0.0,0.0,0.0];
+        var segmentBris=[1.0,1.0,1.0,1.0,1.0];
         
         const CAPSENSE_COUNT = 12;
         const CAPSENSE_TOP = 11;
@@ -482,6 +482,7 @@
         var cap_curr=[0,0,0,0,0,0,0,0,0,0,0,0]; //curr state
         
         socket.on('capSense',function(data){
+            console.log('capSense event');
             if(doLayerPaint){
                 //bottom 0/5,1/6,2/7,3/8,4/9 top
 
