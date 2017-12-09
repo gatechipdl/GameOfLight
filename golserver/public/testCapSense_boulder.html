@@ -487,6 +487,7 @@
 
                 //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
                 var layer = parseInt(data['capsenseId']%5);
+                console.log('layer:', layer);
                 shiftLayerHue(layer);
                 capSenseLEDUpdate();
 
