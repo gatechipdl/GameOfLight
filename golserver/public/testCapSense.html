@@ -104,6 +104,9 @@
             <li>
                 <button onclick="doLayerPaint=!doLayerPaint;">Toggle LayerPaint</button>
             </li>
+             <li>
+                <button onclick="doPew=!doPew;">Toggle Pew</button>
+            </li>
             <li>
                 <button onclick="doCapTest=!doCapTest;">Toggle doCapTest</button>
             </li>
@@ -441,12 +444,12 @@
         
         var doPew = false;
         
-        myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+        //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
         socket.on('capSense',function(data){
             if(doPew){
                 //bottom 0/5,1/6,2/7,3/8,4/9 top
 
-                //myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+                myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
                 if(parseInt(data['state'])==0){
                     myColors[parseInt(data['capsenseId']%5)] = [255,0,0];
                 }
@@ -461,7 +464,7 @@
         var doLayerPaint = false;
         
         
-        var doCapTest=true;
+        var doCapTest=false;
         myColors = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
         const LED_SEGMENT_COUNT = 5;
         var segmentHues=[0.0,0.0,0.0,0.0,0.0];
@@ -503,8 +506,8 @@
             }
         });
         
-        setInterval(doCapTestInterval,10);
-        setInterval(capSenseLEDUpdate,500);
+        //setInterval(doCapTestInterval,10);
+        //setInterval(capSenseLEDUpdate,500);
         
         function doCapTestInterval(){
             if (cap_dev[CAPSENSE_TOP] < cap_threshold) {
