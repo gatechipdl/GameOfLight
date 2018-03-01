@@ -344,18 +344,49 @@ function recoverStationDataListener(socket){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-function capsenseListener(socket){
-    socket.on('capSense',function(data){
+function CapSenseListener(socket){
+    socket.on('capSense',function(data){ //TODO: modify firmware to emit use 'CapSenseEvent'
         //console.log('capsense: '+data);
         var cData = data.split(","); //station, cap, state
         var nData = {
-            'stationId':cData[0],
-            'capsenseId':cData[1],
-            'state':cData[2]
+            'station_id':cData[0],
+            'sensor_id':cData[1],
+            'value':cData[2]
         }
-        io.sockets.to('browsers').emit('capSense',nData);
+        io.sockets.to('browsers').emit('CapSenseEvent',nData);
+        
+        
+        var t_entry = {};
+        capsenseData.forEach(function(entry){
+            if(entry.station_id==nData.station_id){
+                t_entry = entry;
+            }
+        });
+        
+        if(!t_entry){
+            var newEntry = {
+                'station_id':nData.station_id,
+                'values':[0,0,0,0,0,0,0,0,0,0,0,0]
+            };
+            newEntry.values[nData.sensor_id]=nData.value;
+            capsenseData.append(newEntry);
+        }else{
+            var bData = {
+                'station_id':t_entry.station_id,
+                'sensor_id':nData.sensor_id
+            };
+            if(nData.value>t_entry.values[nData.sensor_id]){    
+                io.sockets.to('browsers').emit('CapSenseTouch',bData);
+            }else{
+                io.sockets.to('browsers').emit('CapSenseUnTouch',bData);
+            }
+            t_entry.values[nData.sensor_id]=nData.value;
+        }
     });
 }
+
+var capsenseData = [];
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -442,12 +473,12 @@ function setTreeColorListener(socket){
 }
 
 
-function setFiveColorsListener(socket){
-    socket.on('setFiveColors',function(data){
+function SetFiveColorsListener(socket){
+    socket.on('SetFiveColors',function(data){
         console.dir(data);
         /*
         {
-        stationId:'asdf',
+        station_id:'asdf',
         colors:[
         [255,255,255],
         [255,255,255],
@@ -640,7 +671,7 @@ io.on('connection',function(socket){
         console.log("station client "+socket['id']+" joined room "+roomName+" at ip: "+idx);
 
         CheckForUpdate(roomName);
-        capsenseListener(socket);
+        CapSenseListener(socket);
 
         socket.on('disconnect',function(){
             Object.keys(stationData).forEach(function(key) {
@@ -692,7 +723,7 @@ io.on('connection',function(socket){
             checkForUpdatesListener(socket);
             setFiveHueColorsListener(socket);
             setTreeColorListener(socket);
-            setFiveColorsListener(socket);
+            SetFiveColorsListener(socket);
             setAllColorsListener(socket);
             clearColorsListener(socket);
         }
