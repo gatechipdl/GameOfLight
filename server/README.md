@@ -47,6 +47,50 @@ Light Orchard Server
 see Web Server API - Outgoing Socket.IO Events
 ### Outgoing Socket.IO Events to Web Server
 see Web Server API - Incoming Socket.IO Events
+### Example Use
+```javascript
+var socket = io.connect('/');
+
+socket.on('connect', function() {
+    socket.emit('subscribe', 'browsers'); //to receive CapSenseEvent, CapSenseTouch, CapSenseUnTouch
+});
+
+function setStationColor() {
+    var tData = {};
+    tData['station_id'] = '1'; //station number 1; strings allow more flexibility in naming
+    tData['colors'] = [
+        [255,0,0], //bottom is red
+        [255,255,0], //yellow
+        [0,255,0], //green
+        [0,255,255], //cyan
+        [0,0,255] //top is blue
+        ];
+    socket.emit('SetFiveColors', tData);
+}
+setStationColor();
+
+function CapSenseEventListener(socket){
+    socket.on('CapSenseEvent', function(data) {
+        console.log(
+            'station '+data['station_id']+
+            ' on sensor '+data['sensor_id']+
+            ' has a value of "+data['value']
+        );
+    });
+}
+CapSenseEventListener(socket);
+
+function CapSenseTouchListener(socket){
+    socket.on('CapSenseTouch', function(data) {
+        console.log(
+            'station '+data['station_id']+
+            ' on sensor '+data['sensor_id']+
+            ' was touched'
+        );
+    });
+}
+CapSenseTouchListener(socket);
+```
 
 ## Web Server API
 ### Incoming Socket.IO Events from Web Client
@@ -55,6 +99,7 @@ see Web Server API - Incoming Socket.IO Events
 |active|'SetFiveColors'|{'station_id":<#>, 'colors':[[255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0]]}|
 |active|'SetMode'||
 |planned1|'setStationColors'|renaming of 'SetFiveColors'|
+|planned1|'setMode'|renaming of 'setMode'|
 |planned2|'setStationColor'|just one color|
 |planned2|'setPixelColor'|just one pixel on one station|
 |planned2|'listGroup'|list members of one group|
@@ -70,6 +115,7 @@ see Web Server API - Incoming Socket.IO Events
 ### Outgoing Socket.IO Events to Web Client
 |Status|Message Name|Description|
 |---|---|---|
+|active|'CapSenseEvent'|{'station_id':<#>,'sensor_id':<#>,'value':<#>}|
 |active|'CapSenseTouch'|{'station_id':<#>,'sensor_id':<#>}|
 |active|'CapSenseUnTouch'|{'station_id':<#>,'sensor_id':<#>}|
 |planned1|'capSenseTouch'|rename from 'CapSenseTouch'|
