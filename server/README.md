@@ -74,7 +74,7 @@ function CapSenseEventListener(socket){
         console.log(
             'station '+data['station_id']+
             ' on sensor '+data['sensor_id']+
-            ' has a value of "+data['value']
+            ' has a value of '+data['value']
         );
     });
 }
