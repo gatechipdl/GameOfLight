@@ -172,7 +172,7 @@
         tColor = hexToRgb(document.getElementById("color5").value);
         jData["colors"].push([tColor.r, tColor.g, tColor.b]);
         console.dir(jData);
-        socket.emit('setFiveColors', jData);
+        socket.emit('SetFiveColors', jData);
     }
 
     var rippleIntervalId;
@@ -394,7 +394,7 @@
 
     function colorRipple() {
         rippleData["stationId"] = rippleIndex;
-        socket.emit('setFiveColors', rippleData);
+        socket.emit('SetFiveColors', rippleData);
         rippleIndex++;
         if (rippleIndex > rippleIndexMax) {
             rippleIndex = 1;
@@ -459,7 +459,7 @@
         setTimeout(
             function() {
                 //console.log('sending color to id '+(i+1)+' with color '+theColor);
-                socket.emit('setFiveColors', {
+                socket.emit('SetFiveColors', {
                     'stationId': (i + 1),
                     'colors': theColors
                 });

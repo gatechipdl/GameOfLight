@@ -1,0 +1,141 @@
+<!doctype html>
+
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <title>Light Orchard Logger Client-Side</title>
+        <meta name="description" content="Client-Side Logger for Light Orchard installation">
+        <script src="/socket.io/socket.io.js"></script>
+
+        <style>
+            body {
+                font-family: monospace;
+                color: white;
+                font-size: 15px;
+                background: black;
+                letter-spacing: 0.1em;
+                background-size: cover;
+                background-position: top center;
+            }
+
+            li {
+                list-style: none;
+            }
+
+            button {
+                font-family: inherit;
+                border: none;
+                background: rgba(255, 255, 255, 0.15);
+                padding: 0.25em;
+                color: white;
+                margin: 0 0 0.75em 0;
+                cursor: pointer;
+                font-size: inherit;
+            }
+
+            button:hover {
+                background: rgba(255, 255, 255, 0.25);
+            }
+
+            button:active {
+                background: rgba(255, 255, 255, 0.5);
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <ul>
+            <li>
+                <p>Current Status: </p><p id="status" >Log is Empty</p>
+            </li>
+            <li>
+                <button onclick="startLogging()">Start Logging</button>
+            </li>
+            <li>
+                <button onclick="stopLogging()">Stop Logging</button>
+            </li>
+            <li>
+                <button onclick="downloadObjectAsJson(theLog,'theLog')">Download Log File</button>
+            </li>
+        </ul>
+    </body>
+
+
+    <script>
+        var socket = io.connect('/');
+        var isLogging = false;
+        var theLog = []; //empty log array
+
+        socket.on('connect', function() {
+            socket.emit('subscribe', 'browsers');
+        });
+
+        function startLogging(){
+            isLogging = true;
+            console.log('isLogging is true');
+            document.getElementById("status").innerHTML = "Started Logging";
+        }
+
+        function stopLogging(){
+            isLogging = false;
+            console.log('isLogging is false');
+            document.getElementById("status").innerHTML = "Stopped Logging";
+        }
+
+        socket.on('CapSenseEvent', function(data) {
+            if (isLogging) {
+                console.log('logging CapSenseEvent');
+                theLog.push({
+                    'timestamp':Date.now(),
+                    'message':'CapSenseEvent',
+                    'payload':data
+                });
+            }
+        });
+
+        socket.on('CapSenseTouch', function(data) {
+            if (isLogging) {
+                console.log('logging CapSenseTouch');
+                theLog.push({
+                    'timestamp':Date.now(),
+                    'message':'CapSenseTouch',
+                    'payload':data
+                });
+            }
+        });
+
+        socket.on('CapSenseUnTouch', function(data) {
+            if (isLogging) {
+                console.log('logging CapSenseUnTouch');
+                theLog.push({
+                    'timestamp':Date.now(),
+                    'message':'CapSenseUnTouch',
+                    'payload':data
+                });
+            }
+        });
+
+        socket.on('SetFiveColors', function(data) {
+            if (isLogging) {
+                console.log('logging SetFiveColors');
+                theLog.push({
+                    'timestamp':Date.now(),
+                    'message':'SetFiveColors',
+                    'payload':data
+                });
+            }
+        });
+
+        function downloadObjectAsJson(exportObj, exportName){
+            var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+            var downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href",     dataStr);
+            downloadAnchorNode.setAttribute("download", exportName + ".json");
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
+
+</html>
