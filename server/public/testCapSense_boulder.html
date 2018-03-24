@@ -515,54 +515,54 @@
             segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
         }
         
-        function doCapTestInterval(){
-            if (cap_dev[CAPSENSE_TOP] < cap_threshold) {
-                for (var j = 0; j < LED_SEGMENT_COUNT; j++) {
-                  if (segmentBris[j] < 1.0) {
-                    segmentBris[j] = segmentBris[j] + briStep2;
-                    segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
-                    break;
-                  }
-                }
-                //capSenseLEDUpdate();
-              }
-              for (var i = 0; i < CAPSENSE_COUNT; i++) {
-                cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
-                if (cap_curr[i]) {
-                  var bri_or_sat = i / 5;
-                  var s = i - 5;
-                  switch (bri_or_sat) {
-                    case 0:
-                      segmentHues[i] = (segmentHues[i] + hueStep);
-                      segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
-                      break;
-                    case 1:
-                      segmentSats[s] = (segmentSats[s] + satSteps[s]);
-                      satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
-                      segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
-                      break;
-                    default: //case 2
-                      for (var j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
-                        if (segmentBris[j] > 0.0) {
-                          segmentBris[j] = segmentBris[j] - briStep1;
-                          segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
-                          break;
-                        } else {
-                          if (j == 0) {
-                            for (var k = 0; k < LED_SEGMENT_COUNT; k++) {
-                              segmentSats[k] = 1.0;
-                            }
-                          }
-                        }
-                      }
-                      break;
-                  }
-                }
+        // function doCapTestInterval(){
+        //     if (cap_dev[CAPSENSE_TOP] < cap_threshold) {
+        //         for (var j = 0; j < LED_SEGMENT_COUNT; j++) {
+        //           if (segmentBris[j] < 1.0) {
+        //             segmentBris[j] = segmentBris[j] + briStep2;
+        //             segmentBris[j] = segmentBris[j] >= 1.0 ? 1.0 : segmentBris[j];
+        //             break;
+        //           }
+        //         }
+        //         //capSenseLEDUpdate();
+        //       }
+        //       for (var i = 0; i < CAPSENSE_COUNT; i++) {
+        //         cap_curr[i] = cap_dev[i] > cap_threshold; //greater is true is 1 is "pressed"
+        //         if (cap_curr[i]) {
+        //           var bri_or_sat = i / 5;
+        //           var s = i - 5;
+        //           switch (bri_or_sat) {
+        //             case 0:
+        //               segmentHues[i] = (segmentHues[i] + hueStep);
+        //               segmentHues[i] = segmentHues[i] > 1.0 ? segmentHues[i] - 1.0 : segmentHues[i];
+        //               break;
+        //             case 1:
+        //               segmentSats[s] = (segmentSats[s] + satSteps[s]);
+        //               satSteps[s] = segmentSats[s] >= 1.0 ? satSteps[s] * -1 : segmentSats[s] <= 0.0 ? satSteps[s] * -1 : satSteps[s];
+        //               segmentSats[s] = segmentSats[s] >= 1.0 ? 1.0 : segmentSats[s] <= 0.0 ? 0.0 : segmentSats[s];
+        //               break;
+        //             default: //case 2
+        //               for (var j = LED_SEGMENT_COUNT - 1; j >= 0; j--) {
+        //                 if (segmentBris[j] > 0.0) {
+        //                   segmentBris[j] = segmentBris[j] - briStep1;
+        //                   segmentBris[j] = segmentBris[j] <= 0.0 ? 0.0 : segmentBris[j];
+        //                   break;
+        //                 } else {
+        //                   if (j == 0) {
+        //                     for (var k = 0; k < LED_SEGMENT_COUNT; k++) {
+        //                       segmentSats[k] = 1.0;
+        //                     }
+        //                   }
+        //                 }
+        //               }
+        //               break;
+        //           }
+        //         }
 
-                cap_last[i] = cap_curr[i]; //reset cap_last
-              }
-            //capSenseLEDUpdate();
-        }
+        //         cap_last[i] = cap_curr[i]; //reset cap_last
+        //       }
+        //     //capSenseLEDUpdate();
+        // }
 
         function capSenseLayerHueUpdate() {
             if (doLayerPaint) {

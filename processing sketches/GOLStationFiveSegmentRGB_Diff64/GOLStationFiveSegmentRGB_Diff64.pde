@@ -59,7 +59,7 @@ void setup()
   // List all the available serial ports:
   printArray(Serial.list());
   
-  String portName = Serial.list()[2];
+  String portName = Serial.list()[1];
   sPort = new Serial(this, portName, SERIAL_BAUD);
   
   colorMode(HSB,1f);
