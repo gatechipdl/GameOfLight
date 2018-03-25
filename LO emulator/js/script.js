@@ -1,4 +1,4 @@
-var animation;
+var animation; //each rom will overwrite this variable to take control of the animation intervals
 
 //Object with installation configuration, a.k.a rows, columns and layers
 var LO_config = {
@@ -12,6 +12,10 @@ var rom_list = [
 	{
 		name : "paint",
 		onclick : "initPaint()"
+	},
+	{
+		name : "game of light",
+		onclick : "initGOL()"
 	}
 ];
 
@@ -21,28 +25,51 @@ function StationCapInput() {
 	var d = new Date();
 	this.log = [d.getTime()];
 };
-StationCapInput.prototype.logState = function() {
+StationCapInput.prototype.logState = function(trigger_type) {
 	var d = new Date();
-	this.log.push(d.getTime());
+	this.log.push({
+		time : d.getTime(),
+		type : trigger_type
+	});
 };
-StationCapInput.prototype.getLatest = function() {
+StationCapInput.prototype.getLatest = function(trigger_type) {
 	if (this.log.length==0) {
 		return undefined;
 	}
-	return this.log[this.log.length-1];
+	for (var i=this.log.length-1; i>=0; i--) {
+		if (this.log[i].type == trigger_type) {
+			return this.log[i].time;
+		}
+	}
+	return undefined;
 };
-StationCapInput.prototype.getDelta = function() {
-	if (this.log.length<2) {
+StationCapInput.prototype.getDelta = function(trigger_type) {
+	var index_arr = [];
+	for (var i=this.log.length-1; i>=0; i--) {
+		if (this.log[i].type == trigger_type) {
+			index_arr.push(this.log[i]);
+			if (index_arr.length==2) {
+				break;
+			}
+		}
+	}
+	if (index_arr.length < 2) {
 		return undefined;
 	}
-	var delta = this.log[this.log.length-1] - this.log[this.log.length-2];
+	var delta = index_arr[1].time - index_arr[0].time;
 	return delta;
 };
-StationCapInput.prototype.getLength = function() {
-	return this.log.length;
+StationCapInput.prototype.getLength = function(trigger_type) {
+	var counter = 0;
+	for (var i=this.log.length-1; i>=0; i--) {
+		if (this.log[i].type == trigger_type) {
+			counter++;
+		}
+	}
+	return counter;
 };
-StationCapInput.prototype.getTrigger = function(curr_time, time_delta) {
-	if ((curr_time - this.getLatest()) < time_delta) {
+StationCapInput.prototype.getTrigger = function(trigger_type, curr_time, time_delta) {
+	if ((curr_time - this.getLatest(trigger_type)) < time_delta) {
 		return true;
 	}
 	return false;
@@ -50,13 +77,6 @@ StationCapInput.prototype.getTrigger = function(curr_time, time_delta) {
 
 //layer color variable
 var layer_color = [];
-
-
-/////////////////////////////
-//                         //
-//	EMULATOR UI FUNCTIONS  //
-//                         //
-/////////////////////////////
 
 //init function when HTML body loads
 function init() {
@@ -76,6 +96,28 @@ function loadRoms() {
 	});
 }
 
+function createRomButton(romobj) {
+	var idname = romobj.name+'_rom';
+	$('#menu_toggle_rom').append('<div id="'+idname+'" class="rom_toggle button" onclick="'+romobj.onclick+'">'+romobj.name+'</div>');
+}
+
+function clearRomButtons() {
+	$('#menu_rom_options').empty();
+}
+
+function createRomFunctionButton(obj) {
+	var button_html = '<div class="button" id="'+obj.id+'" onclick="'+obj.function+'">'+obj.name+'</div>'
+	$('#menu_rom_options').append(button_html);
+	$('#'+obj.id).on('click', function() {
+		if (obj.toggle) {
+			$(this).toggleClass('active');
+		}
+		for (i in obj.disable) {
+			$('#'+obj.disable[i]).removeClass('active');
+		}
+	});
+}
+
 //DOM FUNCTION
 //creates DOM objects for LO set up based on LO_config parameters
 function createVisUI() {
@@ -88,7 +130,7 @@ function createVisUI() {
 			$('#'+div_id+' .top').on('click', function() {
 				var info = $(this).parent().attr('id').split('_');
 				var rowcol = info[1].split('-');
-				station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['top'].logState();
+				station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['top'].logState('click');
 			});
 			for (var k=LO_config.layers-1; k>=0; k--) {
 				$('#'+div_id).append('<div class="layer_'+k+' layer"></div>')
@@ -99,25 +141,18 @@ function createVisUI() {
 					var rowcol = info[1].split('-');
 					var layer_info = $(this).parent().attr('class');
 					var layer_number = layer_info.split(' ')[0].split('_')[1];
-					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['L'+layer_number].logState();
+					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['L'+layer_number].logState('click');
 				});
 				$('#'+div_id+' .layer_'+k+' .right').on('click', function() {
 					var info = $(this).parent().parent().attr('id').split('_');
 					var rowcol = info[1].split('-');
 					var layer_info = $(this).parent().attr('class');
 					var layer_number = layer_info.split(' ')[0].split('_')[1];
-					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['R'+layer_number].logState();
+					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['R'+layer_number].logState('click');
 				});
 			}
 		}
 	}
-}
-
-//DOM FUNCTION
-//creates ROM button
-function createRomButton(romobj) {
-	var idname = romobj.name+'_rom';
-	$('#menu_toggle_rom').append('<div id="'+idname+'" class="rom_toggle button" onclick="'+romobj.onclick+'">'+romobj.name+'</div>');
 }
 
 function setLayerColorRGB(row, col, layer, r, g, b) {
@@ -160,16 +195,25 @@ function setLayerColorHSV(row, col, layer, h, s, v) {
 
 //creates cap event boolean variables
 //variable structure is as follows:
+
 // cap_id:
 ///// "top" --> top cap button
 ///// "L"+layer_number --> layer left cap button
 ///// "R"+layer_number --> layer right cap button
-// station_triggers[row_number][col_number][cap_id].log --> an array of timestamps in millis when the cap was triggered.
-// station_triggers[row_number][col_number][cap_id].logState() --> pushes current time in millis into the log.
-// station_triggers[row_number][col_number][cap_id].getLatest() --> get timestamp of latest trigger.
-// station_triggers[row_number][col_number][cap_id].getDelta() --> get timestamp of latest trigger minus timestamp of last trigger.
-// station_triggers[row_number][col_number][cap_id].getLength() --> get number of triggers since the start.
-// station_triggers[row_number][col_number][cap_id].getTrigger(curr_time, time_delta) --> compares latest trigger timestamp with current time against a time interval and checks if it is within the interval. Returns TRUE if inside and FALSE if not.
+
+// station_triggers[row_number][col_number][cap_id].log --> an array of timestamps and trigger types in millis when the cap was triggered.
+
+// trigger_type
+///// "click" --> high state from previous low state
+///// "release" --> low state from previous high state
+///// "hover" --> above cap hover threshold
+
+// station_triggers[row_number][col_number][cap_id].logState(trigger_type) --> pushes current time in millis into the log.
+// station_triggers[row_number][col_number][cap_id].getLatest(trigger_type) --> get timestamp of latest trigger.
+// station_triggers[row_number][col_number][cap_id].getDelta(trigger_type) --> get timestamp of latest trigger minus timestamp of last trigger.
+// station_triggers[row_number][col_number][cap_id].getLength(trigger_type) --> get number of triggers since the start.
+// station_triggers[row_number][col_number][cap_id].getTrigger(trigger_type, curr_time, time_delta) --> compares latest trigger timestamp with current time against a time interval and checks if it is within the interval. Returns TRUE if inside and FALSE if not.
+
 function generateStationTriggers() {
 	for (var i=0; i<LO_config.rows; i++) {
 		station_triggers.push([]);
@@ -197,15 +241,6 @@ function initLayerColor() {
 			}
 		}
 	}
-}
-
-function clearRomButtons() {
-	$('#menu_rom_options').empty();
-}
-
-function createRomFunctionButton(obj) {
-	var button_html = '<div class="button" onclick="'+obj.function+'">'+obj.name+'</div>'
-	$('#menu_rom_options').append(button_html);
 }
 
 
