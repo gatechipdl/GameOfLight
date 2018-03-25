@@ -75,6 +75,42 @@ StationCapInput.prototype.getTrigger = function(trigger_type, curr_time, time_de
 	return false;
 };
 
+//creates cap event boolean variables
+//variable structure is as follows:
+
+// cap_id:
+///// "top" --> top cap button
+///// "L"+layer_number --> layer left cap button
+///// "R"+layer_number --> layer right cap button
+
+// station_triggers[row_number][col_number][cap_id].log --> an array of timestamps and trigger types in millis when the cap was triggered.
+
+// trigger_type
+///// "click" --> high state from previous low state
+///// "release" --> low state from previous high state
+///// "hover" --> above cap hover threshold
+
+// station_triggers[row_number][col_number][cap_id].logState(trigger_type) --> pushes current time in millis into the log.
+// station_triggers[row_number][col_number][cap_id].getLatest(trigger_type) --> get timestamp of latest trigger.
+// station_triggers[row_number][col_number][cap_id].getDelta(trigger_type) --> get timestamp of latest trigger minus timestamp of last trigger.
+// station_triggers[row_number][col_number][cap_id].getLength(trigger_type) --> get number of triggers since the start.
+// station_triggers[row_number][col_number][cap_id].getTrigger(trigger_type, curr_time, time_delta) --> compares latest trigger timestamp with current time against a time interval and checks if it is within the interval. Returns TRUE if inside and FALSE if not.
+
+function generateStationTriggers() {
+	for (var i=0; i<LO_config.rows; i++) {
+		station_triggers.push([]);
+		for (var j=0; j<LO_config.cols; j++) {
+			station_triggers[i].push({
+				top : new StationCapInput()
+			});
+			for (var k=0; k<LO_config.layers; k++) {
+				station_triggers[i][j]["L"+k] = new StationCapInput();
+				station_triggers[i][j]["R"+k] = new StationCapInput();
+			}
+		}
+	}
+}
+
 //layer color variable
 var layer_color = [];
 
@@ -196,38 +232,10 @@ function setLayerColorHSV(row, col, layer, h, s, v) {
 	$('#'+div_id+' .layer_'+layer).css('background', 'rgba('+layer_color[row][col][layer].r+','+layer_color[row][col][layer].g+','+layer_color[row][col][layer].b+',1.0)');
 }
 
-//creates cap event boolean variables
-//variable structure is as follows:
-
-// cap_id:
-///// "top" --> top cap button
-///// "L"+layer_number --> layer left cap button
-///// "R"+layer_number --> layer right cap button
-
-// station_triggers[row_number][col_number][cap_id].log --> an array of timestamps and trigger types in millis when the cap was triggered.
-
-// trigger_type
-///// "click" --> high state from previous low state
-///// "release" --> low state from previous high state
-///// "hover" --> above cap hover threshold
-
-// station_triggers[row_number][col_number][cap_id].logState(trigger_type) --> pushes current time in millis into the log.
-// station_triggers[row_number][col_number][cap_id].getLatest(trigger_type) --> get timestamp of latest trigger.
-// station_triggers[row_number][col_number][cap_id].getDelta(trigger_type) --> get timestamp of latest trigger minus timestamp of last trigger.
-// station_triggers[row_number][col_number][cap_id].getLength(trigger_type) --> get number of triggers since the start.
-// station_triggers[row_number][col_number][cap_id].getTrigger(trigger_type, curr_time, time_delta) --> compares latest trigger timestamp with current time against a time interval and checks if it is within the interval. Returns TRUE if inside and FALSE if not.
-
-function generateStationTriggers() {
+function updateAllStationsColor() {
 	for (var i=0; i<LO_config.rows; i++) {
-		station_triggers.push([]);
 		for (var j=0; j<LO_config.cols; j++) {
-			station_triggers[i].push({
-				top : new StationCapInput()
-			});
-			for (var k=0; k<LO_config.layers; k++) {
-				station_triggers[i][j]["L"+k] = new StationCapInput();
-				station_triggers[i][j]["R"+k] = new StationCapInput();
-			}
+			setStationColor(i, j);
 		}
 	}
 }
