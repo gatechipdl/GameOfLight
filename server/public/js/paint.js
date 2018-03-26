@@ -1,5 +1,5 @@
 var paint_cap_delta = 800;
-var paint_animation_interval = 200;
+var paint_animation_interval = 250;
 
 var paint_rom_functions = [
 	{
