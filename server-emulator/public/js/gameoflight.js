@@ -125,6 +125,7 @@ function golAnimation() {
     } else {
 
     }
+    updateAllStationsColor();
 }
 
 function setGameLayerColor(row, col, layer, state) {

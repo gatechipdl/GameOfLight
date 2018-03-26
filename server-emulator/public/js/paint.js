@@ -74,6 +74,7 @@ function paintAnimation() {
 			}
 		}
 	}
+	updateAllStationsColor();
 }
 
 function paintClearAll() {
