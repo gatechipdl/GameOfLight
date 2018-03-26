@@ -91,6 +91,7 @@ function paintClearAll() {
 			}
 		}
 	}
+	updateAllStationsFlag();
 }
 
 function paintRandomAll() {
@@ -101,6 +102,7 @@ function paintRandomAll() {
 			}
 		}
 	}
+	updateAllStationsFlag();
 }
 
 function paintIncreaseValueAll() {
@@ -113,6 +115,7 @@ function paintIncreaseValueAll() {
 			}
 		}
 	}
+	updateAllStationsFlag();
 }
 
 function paintDecreaseValueAll() {
@@ -125,4 +128,5 @@ function paintDecreaseValueAll() {
 			}
 		}
 	}
+	updateAllStationsFlag();
 }

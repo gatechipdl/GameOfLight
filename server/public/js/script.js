@@ -269,6 +269,14 @@ function resetStationUpdate() {
 	}
 }
 
+function updateAllStationsFlag() {
+	for (i in station_update) {
+		for (j in station_update[i]) {
+			station_update[i][j] = true;
+		}
+	}
+}
+
 
 // HSV values should be between or equals to 0 and 1
 function HSVtoRGB(h, s, v) {
