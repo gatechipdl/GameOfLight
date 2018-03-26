@@ -41,6 +41,7 @@ function CapSenseTouchListener(socket){
                 }
             }
         }
+        console.log('cap event', row, col);
         if (row != -1 && col != -1) {
             var div_id = 'stationui_'+row+'-'+col;
             var cap = parseInt(data['sensor_id']);

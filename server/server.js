@@ -346,7 +346,7 @@ function recoverStationDataListener(socket){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 function CapSenseListener(socket){
     socket.on('capSense',function(data){ //TODO: modify firmware to emit use 'CapSenseEvent'
-        //console.log('capsense: '+data);
+        console.log('capsense: '+data);
         var cData = data.split(","); //station, cap, state
         var nData = {
             'station_id':cData[0],
