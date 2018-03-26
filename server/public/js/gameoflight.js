@@ -105,6 +105,7 @@ function golAnimation() {
                 }
             }
         }
+        station_update = $.extend(true, {}, comparing_station_states);
     } else if (editGame) {
         for (var i=0; i<LO_config.rows; i++) {
             for (var j=0; j<LO_config.cols; j++) {
@@ -229,6 +230,8 @@ function golDecreaseInterval() {
     console.log("gol_generation_interval "+gol_generation_interval);
 }
 
+
+var comparing_station_states = [];
 function updateGame() {
 
     curr_game_state = $.extend(true, {}, next_game_state);
@@ -271,8 +274,11 @@ function updateGame() {
         }
     }
 
+    comparing_station_states = [];
     for (i in curr_game_state) {
+        comparing_station_states.push([]);
         for (j in curr_game_state[i]) {
+            comparing_station_states[i].push(false);
             var update_station_bool = false;
             for (k in curr_game_state[i][j]) {
                 if (curr_game_state[i][j][k] != next_game_state[i][j][k]) {
@@ -281,7 +287,7 @@ function updateGame() {
                 }
             }
             if (update_station_bool) {
-                station_update[i][j] = true;
+                comparing_station_states[i][j] = true;
             }
         }
     }

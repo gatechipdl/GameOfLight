@@ -475,7 +475,9 @@ function setTreeColorListener(socket){
 
 function SetFiveColorsListener(socket){
     socket.on('SetFiveColors',function(data){
-        // console.dir(data);
+        if (data['log']) {
+            console.dir(data);
+        }
         socket.broadcast.emit('SetFiveColors',data);
         /*
         {

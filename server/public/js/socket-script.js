@@ -16,6 +16,7 @@ function setStationColor(row, col) {
     if (LO_config.layers == 5) {
         var tData = {};
         var station_id = address_map[row][col];
+        //tData['log'] = true;
         tData['station_id'] = station_id;
         console.log(layer_color[row][col]);
         tData['colors'] = [
