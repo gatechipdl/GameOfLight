@@ -1,5 +1,5 @@
-var gol_cap_delta = 25;
-var gol_animation_interval = 25;
+var gol_cap_delta = 250;
+var gol_animation_interval = 250;
 var gol_generation_interval = 2000;
 var generation_time = 0;
 
@@ -105,6 +105,7 @@ function golAnimation() {
                 }
             }
         }
+        updateAllStationsFlag();
     } else if (editGame) {
         for (var i=0; i<LO_config.rows; i++) {
             for (var j=0; j<LO_config.cols; j++) {
@@ -112,10 +113,12 @@ function golAnimation() {
                     if (station_triggers[i][j]['L'+k].getTrigger("click", time, gol_cap_delta)) {
                         game_state[i][j][k] = (game_state[i][j][k]+1)%4;
                         setGameLayerColor(i, j, k, game_state[i][j][k]);
+                        station_update[i][j] = true;
                     }
                     if (station_triggers[i][j]['R'+k].getTrigger("click", time, gol_cap_delta)) {
                         game_state[i][j][k] = (4+game_state[i][j][k]-1)%4;
                         setGameLayerColor(i, j, k, game_state[i][j][k]);
+                        station_update[i][j] = true;
                     }
                 }
             }
@@ -158,6 +161,7 @@ function golRandom() {
     }
     curr_game_state = $.extend(true, {}, game_state);
     next_game_state = $.extend(true, {}, game_state);
+    updateAllStationsFlag();
 }
 
 function golClear() {
@@ -172,6 +176,7 @@ function golClear() {
     }
     curr_game_state = $.extend(true, {}, game_state);
     next_game_state = $.extend(true, {}, game_state);
+    updateAllStationsFlag();
 }
 
 function golReset() {
@@ -185,6 +190,7 @@ function golReset() {
     }
     curr_game_state = $.extend(true, {}, game_state);
     next_game_state = $.extend(true, {}, game_state);
+    updateAllStationsFlag();
 }
 
 function golEdit() {
