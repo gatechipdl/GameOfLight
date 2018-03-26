@@ -41,18 +41,18 @@ function CapSenseTouchListener(socket){
                 }
             }
         }
-        console.log('cap event', row, col);
         if (row != -1 && col != -1) {
             var div_id = 'stationui_'+row+'-'+col;
             var cap = parseInt(data['sensor_id']);
+            console.log('cap event', row, col, cap);
             if (cap >= 0 && cap <= 4) {
-                var layer_id = 'layer'+cap;
-                $('#'+div_id+' .'+layer_id+' .left').click();
+                var layer_id = 'L'+cap;
+                station_triggers[row][col][layer_id].logState('click');
             } else if (cap >= 5 && cap <= 9) {
-                var layer_id = 'layer'+(cap-5);
-                $('#'+div_id+' .'+layer_id+' .right').click();
+                var layer_id = 'R'+(cap-5);
+                station_triggers[row][col][layer_id].logState('click');
             } else if (cap == 11) {
-                $('#'+div_id+' .top').click();
+                station_triggers[row][col]['top'].logState('click');
             }
         }
     });
