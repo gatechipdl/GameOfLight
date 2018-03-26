@@ -1,5 +1,5 @@
-var paint_cap_delta = 500;
-var paint_animation_interval = 50;
+var paint_cap_delta = 800;
+var paint_animation_interval = 200;
 
 var paint_rom_functions = [
 	{
@@ -49,9 +49,13 @@ function initPaint() {
 	animation = setInterval(paintAnimation, paint_animation_interval);
 }
 
+var v_incr = 0.05;
+var h_incr = 0.05;
+var s_incr = 0.05;
 function paintAnimation() {
 	var d = new Date();
 	var time = d.getTime();
+	var socket_bool = false;
 	for (var i=0; i<LO_config.rows; i++) {
 		for (var j=0; j<LO_config.cols; j++) {
 			var change_v = false;
@@ -60,21 +64,26 @@ function paintAnimation() {
 			}
 			for (var k=0; k<LO_config.layers; k++) {
 				if (change_v) {
-					var v = (layer_color[i][j][k].v + 0.015)%1;
+					var v = (layer_color[i][j][k].v + v_incr)%1;
 					setLayerColorHSV(i, j, k, undefined, undefined, v);
+					socket_bool = true;
 				}
 				if (station_triggers[i][j]['L'+k].getTrigger("click", time, paint_cap_delta)) {
-					var h = (layer_color[i][j][k].h + 0.005)%1;
+					var h = (layer_color[i][j][k].h + h_incr)%1;
 					setLayerColorHSV(i, j, k, h, undefined, undefined);
+					socket_bool = true;
 				}
 				if (station_triggers[i][j]['R'+k].getTrigger("click", time, paint_cap_delta)) {
-					var s = (layer_color[i][j][k].s + 0.01)%1;
+					var s = (layer_color[i][j][k].s + s_incr)%1;
 					setLayerColorHSV(i, j, k, undefined, s, undefined);
+					socket_bool = true;
 				}
 			}
 		}
 	}
-	updateAllStationsColor();
+	if (socket_bool) {
+		updateAllStationsColor();
+	}
 }
 
 function paintClearAll() {
