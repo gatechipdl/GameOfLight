@@ -18,7 +18,6 @@ function setStationColor(row, col) {
         var station_id = address_map[row][col];
         //tData['log'] = true;
         tData['station_id'] = station_id;
-        console.log(layer_color[row][col]);
         tData['colors'] = [
             [layer_color[row][col][0].r,layer_color[row][col][0].g,layer_color[row][col][0].b],
             [layer_color[row][col][1].r,layer_color[row][col][1].g,layer_color[row][col][1].b],
@@ -29,3 +28,32 @@ function setStationColor(row, col) {
         socket.emit('SetFiveColors', tData);
     }
 }
+
+function CapSenseTouchListener(socket){
+    socket.on('CapSenseTouch', function(data) {
+        var row = -1, col = -1;
+        for (i in address_map) {
+            for (j in address_map[i]) {
+                if (parseInt(data['station_id']) == parseInt(address_map[i][j])) {
+                    row = parseInt(i);
+                    col = parseInt(j);
+                    break;
+                }
+            }
+        }
+        if (row != -1 && col != -1) {
+            var div_id = 'stationui_'+row+'-'+col;
+            var cap = parseInt(data['sensor_id']);
+            if (cap >= 0 && cap <= 4) {
+                var layer_id = 'layer'+cap;
+                $('#'+div_id+' .'+layer_id+' .left').click();
+            } else if (cap >= 5 && cap <= 9) {
+                var layer_id = 'layer'+(cap-5);
+                $('#'+div_id+' .'+layer_id+' .right').click();
+            } else if (cap == 11) {
+                $('#'+div_id+' .top').click();
+            }
+        }
+    });
+}
+CapSenseTouchListener(socket);

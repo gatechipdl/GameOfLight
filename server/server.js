@@ -372,8 +372,8 @@ function CapSenseListener(socket){
             capsenseData.push(newEntry);
         }else{
             var bData = {
-                'station_id':t_entry.station_id,
-                'sensor_id':nData.sensor_id
+                'station_id':t_entry.station_id, //1-25
+                'sensor_id':nData.sensor_id //0-4: One side, 5-9: One side, 11: Top
             };
             if(nData.value>t_entry.values[nData.sensor_id]){    
                 io.sockets.to('browsers').emit('CapSenseTouch',bData);
