@@ -105,7 +105,6 @@ function golAnimation() {
                 }
             }
         }
-        updateAllStationsFlag();
     } else if (editGame) {
         for (var i=0; i<LO_config.rows; i++) {
             for (var j=0; j<LO_config.cols; j++) {
@@ -216,6 +215,7 @@ function golRun() {
             }
         }
     }
+    updateAllStationsFlag();
 }
 
 function golIncreaseInterval() {
@@ -267,6 +267,21 @@ function updateGame() {
                 }
 
                 next_game_state[i][j][k] = index_max;
+            }
+        }
+    }
+
+    for (i in curr_game_state) {
+        for (j in curr_game_state[i]) {
+            var update_station_bool = false;
+            for (k in curr_game_state[i][j]) {
+                if (curr_game_state[i][j][k] != next_game_state[i][j][k]) {
+                    update_station_bool = true;
+                    break;
+                }
+            }
+            if (update_station_bool) {
+                station_update[i][j] = true;
             }
         }
     }
