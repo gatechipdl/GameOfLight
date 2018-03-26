@@ -55,36 +55,32 @@ var s_incr = 0.05;
 function paintAnimation() {
 	var d = new Date();
 	var time = d.getTime();
-	var socket_bool = false;
 	for (var i=0; i<LO_config.rows; i++) {
 		for (var j=0; j<LO_config.cols; j++) {
 			var change_v = false;
 			if (station_triggers[i][j]['top'].getTrigger("click", time, paint_cap_delta)) {
 				change_v = true;
+				station_update[i][j] = true;
 			}
 			for (var k=0; k<LO_config.layers; k++) {
 				if (change_v) {
 					var v = (layer_color[i][j][k].v + v_incr)%1;
 					setLayerColorHSV(i, j, k, undefined, undefined, v);
-					socket_bool = true;
 				}
 				if (station_triggers[i][j]['L'+k].getTrigger("click", time, paint_cap_delta)) {
 					var h = (layer_color[i][j][k].h + h_incr)%1;
 					setLayerColorHSV(i, j, k, h, undefined, undefined);
-					socket_bool = true;
+					station_update[i][j] = true;
 				}
 				if (station_triggers[i][j]['R'+k].getTrigger("click", time, paint_cap_delta)) {
 					var s = (layer_color[i][j][k].s + s_incr)%1;
 					setLayerColorHSV(i, j, k, undefined, s, undefined);
-					socket_bool = true;
+					station_update[i][j] = true;
 				}
 			}
 		}
 	}
-	if (socket_bool) {
-		console.log('updating stations');
-		updateAllStationsColor();
-	}
+	updateAllStationsColor();
 }
 
 function paintClearAll() {

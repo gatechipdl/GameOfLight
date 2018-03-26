@@ -234,11 +234,15 @@ function setLayerColorHSV(row, col, layer, h, s, v) {
 }
 
 function updateAllStationsColor() {
+	console.log('updating all stations color');
 	for (var i=0; i<LO_config.rows; i++) {
 		for (var j=0; j<LO_config.cols; j++) {
-			setStationColor(i, j);
+			if (station_update[i][j]==true) {
+				setStationColor(i, j);
+			}
 		}
 	}
+	resetStationUpdate();
 }
 
 //set all layer colors to black
