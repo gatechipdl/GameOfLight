@@ -113,6 +113,7 @@ function generateStationTriggers() {
 
 //layer color variable
 var layer_color = [];
+var station_update = [];
 
 //init function when HTML body loads
 function init() {
@@ -244,12 +245,22 @@ function updateAllStationsColor() {
 function initLayerColor() {
 	for (var i=0; i<LO_config.rows; i++) {
 		layer_color.push([]);
+		station_update.push([]);
 		for (var j=0; j<LO_config.cols; j++) {
+			station_update[i].push(false);
 			layer_color[i].push([]);
 			for (var k=0; k<LO_config.layers; k++) {
 				layer_color[i][j].push({r:0, g:0, b:0, h:0, s:0, v:0});
 				setLayerColorRGB(i, j, k, 0, 0, 0);
 			}
+		}
+	}
+}
+
+function resetStationUpdate() {
+	for (i in station_update) {
+		for (j in station_update[i]) {
+			station_update[i][j] = false;
 		}
 	}
 }

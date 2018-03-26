@@ -82,6 +82,7 @@ function paintAnimation() {
 		}
 	}
 	if (socket_bool) {
+		console.log('updating stations');
 		updateAllStationsColor();
 	}
 }

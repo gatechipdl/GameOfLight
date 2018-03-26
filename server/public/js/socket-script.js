@@ -17,6 +17,7 @@ function setStationColor(row, col) {
         var tData = {};
         var station_id = address_map[row][col];
         tData['station_id'] = station_id;
+        console.log(layer_color[row][col]);
         tData['colors'] = [
             [layer_color[row][col][0].r,layer_color[row][col][0].g,layer_color[row][col][0].b],
             [layer_color[row][col][1].r,layer_color[row][col][1].g,layer_color[row][col][1].b],
