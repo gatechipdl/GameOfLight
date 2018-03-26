@@ -275,6 +275,7 @@ function updateGame() {
     }
 
     comparing_station_states = [];
+    var counter = 0;
     for (i in curr_game_state) {
         comparing_station_states.push([]);
         for (j in curr_game_state[i]) {
@@ -288,9 +289,11 @@ function updateGame() {
             }
             if (update_station_bool) {
                 comparing_station_states[i][j] = true;
+                counter++;
             }
         }
     }
+    console.log('updating', counter, 'stations');
 }
 
 function renderLayer(row, col, layer, curr, next, time_ratio) {

@@ -356,7 +356,7 @@ function CapSenseListener(socket){
         io.sockets.to('browsers').emit('CapSenseEvent',nData);
         
         
-        var t_entry = {};
+        var t_entry;
         capsenseData.forEach(function(entry){
             if(entry.station_id==nData.station_id){
                 t_entry = entry;
@@ -369,7 +369,7 @@ function CapSenseListener(socket){
                 'values':[0,0,0,0,0,0,0,0,0,0,0,0]
             };
             newEntry.values[nData.sensor_id]=nData.value;
-            capsenseData.append(newEntry);
+            capsenseData.push(newEntry);
         }else{
             var bData = {
                 'station_id':t_entry.station_id,
