@@ -1,4 +1,4 @@
-var paint_cap_delta = 800;
+var paint_cap_delta = 1000;
 var paint_animation_interval = 250;
 
 var paint_rom_functions = [
@@ -50,7 +50,7 @@ function initPaint() {
 }
 
 var v_incr = 0.05;
-var h_incr = 0.05;
+var h_incr = 0.01;
 var s_incr = 0.05;
 function paintAnimation() {
 	var d = new Date();
