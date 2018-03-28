@@ -47,12 +47,12 @@ function CapSenseTouchListener(socket){
             console.log('cap event', row, col, cap);
             if (cap >= 0 && cap <= 4) {
                 var layer_id = 'L'+cap;
-                station_triggers[row][col][layer_id].logState('click');
+                station_triggers[row][col][layer_id].logState('click', true);
             } else if (cap >= 5 && cap <= 9) {
                 var layer_id = 'R'+(cap-5);
-                station_triggers[row][col][layer_id].logState('click');
+                station_triggers[row][col][layer_id].logState('click', true);
             } else if (cap == 11) {
-                station_triggers[row][col]['top'].logState('click');
+                station_triggers[row][col]['top'].logState('click', true);
             }
         }
     });

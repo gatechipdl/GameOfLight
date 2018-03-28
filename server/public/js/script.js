@@ -25,11 +25,12 @@ function StationCapInput() {
 	var d = new Date();
 	this.log = [d.getTime()];
 };
-StationCapInput.prototype.logState = function(trigger_type) {
+StationCapInput.prototype.logState = function(trigger_type, bool) {
 	var d = new Date();
 	this.log.push({
 		time : d.getTime(),
-		type : trigger_type
+		type : trigger_type,
+		physical : bool
 	});
 };
 StationCapInput.prototype.getLatest = function(trigger_type) {
@@ -170,7 +171,7 @@ function createVisUI() {
 			$('#'+div_id+' .top').on('click', function() {
 				var info = $(this).parent().attr('id').split('_');
 				var rowcol = info[1].split('-');
-				station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['top'].logState('click');
+				station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['top'].logState('click', false);
 			});
 			for (var k=LO_config.layers-1; k>=0; k--) {
 				$('#'+div_id).append('<div class="layer_'+k+' layer"></div>')
@@ -181,14 +182,14 @@ function createVisUI() {
 					var rowcol = info[1].split('-');
 					var layer_info = $(this).parent().attr('class');
 					var layer_number = layer_info.split(' ')[0].split('_')[1];
-					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['L'+layer_number].logState('click');
+					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['L'+layer_number].logState('click', false);
 				});
 				$('#'+div_id+' .layer_'+k+' .right').on('click', function() {
 					var info = $(this).parent().parent().attr('id').split('_');
 					var rowcol = info[1].split('-');
 					var layer_info = $(this).parent().attr('class');
 					var layer_number = layer_info.split(' ')[0].split('_')[1];
-					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['R'+layer_number].logState('click');
+					station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['R'+layer_number].logState('click', false);
 				});
 			}
 		}

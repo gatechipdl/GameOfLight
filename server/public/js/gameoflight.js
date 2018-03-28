@@ -60,7 +60,7 @@ var curr_game_state = [];
 var next_game_state = [];
 var runGame = false;
 var editGame = false;
-var live_domain = [4, 8];
+var live_domain = [4, 8, 4, 8];
 
 function initGOL() {
 	clearRomButtons();
@@ -240,22 +240,33 @@ function updateGame() {
         for (var j=0; j<LO_config.cols; j++) {
             for (var k=0; k<LO_config.layers; k++) {
 
+                var curr_state = curr_game_state[i][j][k];
                 var neighbor = [0, 0, 0, 0];
 
                 for (var x=-1.0; x<=1.0; x++) {
                     for (var y=-1.0; y<=1.0; y++) {
                         for (var z=-1.0; z<=1.0; z++) {
-                            var x1 = (parseInt(LO_config.rows)+parseInt(i)+parseInt(x))%parseInt(LO_config.rows);
-                            var y1 = (parseInt(LO_config.cols)+parseInt(j)+parseInt(y))%parseInt(LO_config.cols);
-                            var z1 = (parseInt(LO_config.layers)+parseInt(k)+parseInt(z))%parseInt(LO_config.layers);
-                            neighbor[curr_game_state[x1][y1][z1]]++;
+                            if (x==0 && y==0 && z==0) {
+                            } else {
+                                var x1 = (parseInt(LO_config.rows)+parseInt(i)+parseInt(x))%parseInt(LO_config.rows);
+                                var y1 = (parseInt(LO_config.cols)+parseInt(j)+parseInt(y))%parseInt(LO_config.cols);
+                                var z1 = (parseInt(LO_config.layers)+parseInt(k)+parseInt(z))%parseInt(LO_config.layers);
+                                neighbor[curr_game_state[x1][y1][z1]]++;
+                            }
                         }
                     }   
                 }
 
-                for (var m=0; m<neighbor.length; m++) {
-                    if (neighbor[m] <= live_domain[0] || neighbor[m] >= live_domain[1]) {
-                        neighbor[m] = 0;
+                neighbor[0] = 0;
+                for (var m=1; m<neighbor.length; m++) {
+                    if (curr_state == m) {
+                        if (neighbor[m] < live_domain[2] || neighbor[m] > live_domain[3]) {
+                            neighbor[m] = 0;
+                        }
+                    } else {
+                        if (neighbor[m] < live_domain[0] || neighbor[m] > live_domain[1]) {
+                            neighbor[m] = 0;
+                        }
                     }
                 }
 
