@@ -1,17 +1,17 @@
 var paint_cap_delta = 1000;
 var paint_animation_interval = 250;
 
-var paint_rom_functions = [
+var rainbow_rom_functions = [
 	{
 		name : 'clear all',
-		id : 'paint_clear_all',
-		function : 'paintClearAll()',
+		id : 'rainbow_clear_all',
+		function : 'rainbowClearAll()',
 		toggle : false
 	},
 	{
 		name : 'rainbow',
-		id : 'paint_rainbow',
-		function : 'paintRainbow()',
+		id : 'rainbow_colors',
+		function : 'rainbowColors()',
 		toggle : false
 	}
 ];
@@ -21,8 +21,8 @@ function initRainbow() {
 	clearRomButtons();
 	initLayerColor();
 
-	for (i in paint_rom_functions) {
-		createRomFunctionButton(paint_rom_functions[i]);
+	for (i in rainbow_rom_functions) {
+		createRomFunctionButton(rainbow_rom_functions[i]);
 	}
 
 	for (var i=0; i<LO_config.rows; i++) {
@@ -71,7 +71,7 @@ function paintAnimation() {
 	updateAllStationsColor();
 }
 
-function paintClearAll() {
+function rainbowClearAll() {
 	for (var i=0; i<LO_config.rows; i++) {
 		for (var j=0; j<LO_config.cols; j++) {
 			for (var k=0; k<LO_config.layers; k++) {
@@ -82,7 +82,7 @@ function paintClearAll() {
 	updateAllStationsFlag();
 }
 
-function paintRainbow() {
+function rainbowColors() {
 	for (var i=0; i<LO_config.rows; i++) {
 		for (var j=0; j<LO_config.cols; j++) {
 			for (var k=0; k<LO_config.layers; k++) {
