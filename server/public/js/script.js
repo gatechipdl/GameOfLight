@@ -16,6 +16,10 @@ var rom_list = [
 	{
 		name : "game of light",
 		onclick : "initGOL()"
+	},
+	{
+		name : "rainbow",
+		onclick : "initRainbow()"
 	}
 ];
 
