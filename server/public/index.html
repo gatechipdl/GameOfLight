@@ -28,8 +28,17 @@
 	
 	<div id="menu_toggle_rom" class="menu small_col">
 	</div>
+	
+	<div class="menu small_col">
+		<div id="menu_rom_options" class="inset">
+		</div>
 
-	<div id="menu_rom_options" class="menu small_col">
+		<div id="menu_logging" class="inset">
+			<label for="bookmark_val">Bookmark name</label><input type="text" name="bookmark_val" id="bookmark_val">
+			<br>
+			<div class="button" id="bookmark_button" onclick="addBookmark()">Bookmark</div>
+			<div class="button" id="export_log_button" onclick="exportLog()">Export Log</div>
+		</div>
 	</div>
 
 	<div id="menu_vis_ui" class="menu big_col">

@@ -23,7 +23,7 @@ var rom_list = [
 var station_triggers = [];
 function StationCapInput() {
 	var d = new Date();
-	this.log = [d.getTime()];
+	this.log = [];
 };
 StationCapInput.prototype.logState = function(trigger_type, bool) {
 	var d = new Date();
@@ -327,4 +327,67 @@ function RGBtoHSV(r, g, b) {
         s: s,
         v: v
     };
+}
+
+
+// Bookmarking and Logging
+
+function addBookmark() {
+	var str = 'bookmark_' + $('#bookmark_val').val();
+	for (i in station_triggers) {
+		for (j in station_triggers[i]) {
+			for (k in station_triggers[i][j]) {
+				station_triggers[i][j][k].logState(str, false);
+			}
+		}	
+	}
+	$('#bookmark_button').addClass('activate');
+	setTimeout(function() {
+		$('#bookmark_button').removeClass('activate');
+	}, 1000);
+}
+
+function exportLog() {
+	var d = new Date();
+	var events = [];
+	for (i in station_triggers) {
+		for (j in station_triggers[i]) {
+			for (k in station_triggers[i][j]) {
+				for (var m=0;  m<station_triggers[i][j][k].log.length; m++) {
+					events.push({
+						time: station_triggers[i][j][k].log[m].time,
+						id: i+'-'+j+'_'+k,
+						type: station_triggers[i][j][k].log[m].type,
+						physical: station_triggers[i][j][k].log[m].physical
+					});
+				}
+			}
+		}	
+	}
+	events.sort(function(a, b) {
+		return a.time - b.time;
+	});
+
+	var csv_rows = [];
+	var str = [];
+	for (i in events[0]) {
+		str.push(i);
+	}
+	csv_rows.push(str.join(','));
+	for (i in events) {
+		var event_str = [];
+		for (j in events[i]) {
+			event_str.push(events[i][j]);
+		}
+		csv_rows.push(event_str.join(','));
+	}
+
+	var csv_string = csv_rows.join('\r\n');
+	var a         = document.createElement('a');
+	a.href        = 'data:attachment/csv,' +  encodeURIComponent(csv_string);
+	a.target      = '_blank';
+	a.download    = 'LO-log_'+d.getTime()+'.csv';
+
+	document.body.appendChild(a);
+	a.click();
 }

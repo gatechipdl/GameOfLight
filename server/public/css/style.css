@@ -24,6 +24,13 @@ body, html {
     max-width: 300px; 
 }
 
+.inset {
+    position: relative;
+    float: left;
+    width: 100%;
+    margin-bottom: 3em;
+}
+
 .big_col {
     max-width: 900px; 
 }
@@ -42,7 +49,7 @@ body, html {
 }
 
 .button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .button:active {
@@ -126,4 +133,44 @@ span.station_name {
     float: left;
     padding-bottom: 1em;
     font-size: 0.8em;
+}
+
+#menu_logging::before {
+    content: "Logging functions";
+    position: relative;
+    float: left;
+    padding-bottom: 1em;
+    font-size: 0.8em;
+    position: relative;
+    float: left;
+    width: 100%;
+    clear: both;
+}
+
+#menu_logging input {
+    position: relative;
+    float: left;
+    background: #222;
+    color: white;
+    border: none;
+    border-bottom: 1px solid white; 
+    height: 2em;
+    width: 100%;
+    margin-bottom: 1em;
+}
+#menu_logging label {
+    position: relative;
+    float: left;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-size: 0.6em;
+    text-transform: uppercase;    
+}
+
+#bookmark_button {
+    background: inherit;
+}
+
+#bookmark_button.activate {
+    background: #4A7  !important;
 }
