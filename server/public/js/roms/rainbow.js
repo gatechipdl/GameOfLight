@@ -1,18 +1,20 @@
-var paint_cap_delta = 1000;
-var paint_animation_interval = 250;
+var rainbow_cap_delta = 2000;
+var rainbow_animation_interval = 250;
+
+rom_list.push(
+	{
+		name : "rainbow",
+		onclick : "initRainbow()"
+	}
+);
 
 var rainbow_rom_functions = [
-	{
-		name : 'clear all',
-		id : 'rainbow_clear_all',
-		function : 'rainbowClearAll()',
-		toggle : false
-	},
+
 	{
 		name : 'rainbow',
 		id : 'rainbow_colors',
 		function : 'rainbowColors()',
-		toggle : false
+		toggle : true
 	}
 ];
 
@@ -24,6 +26,13 @@ function initRainbow() {
 	for (i in rainbow_rom_functions) {
 		createRomFunctionButton(rainbow_rom_functions[i]);
 	}
+    
+	for (var i=0; i<LO_config.rows; i++) {
+        rainbow_s_counter.push([]);
+		for (var j=0; j<LO_config.cols; j++) {
+            rainbow_s_counter[i].push(0);
+        }
+    }
 
 	for (var i=0; i<LO_config.rows; i++) {
 		for (var j=0; j<LO_config.cols; j++) {
@@ -34,62 +43,72 @@ function initRainbow() {
 	}
 
 	clearInterval(animation);
-	animation = setInterval(paintAnimation, paint_animation_interval);
+	animation = setInterval(rainbowAnimation, rainbow_animation_interval);
 }
 
-var v_incr = 0.05;
-var h_incr = 0.01;
-var s_incr = 0.05;
-function paintAnimation() {
+var rainbow_v_incr = 0.05;
+var rainbow_h_incr = 0.01;
+var rainbow_s_incr = 0.05;
+var rainbow_h_counter = 0;
+var rainbow_s_counter = [];
+var rainbow_run = true;
+function rainbowAnimation() {
 	var d = new Date();
 	var time = d.getTime();
-	for (var i=0; i<LO_config.rows; i++) {
-		for (var j=0; j<LO_config.cols; j++) {
-			var change_v = false;
-			if (station_triggers[i][j]['top'].getTrigger("click", time, paint_cap_delta)) {
-				change_v = true;
-				station_update[i][j] = true;
-			}
-			for (var k=0; k<LO_config.layers; k++) {
-				if (change_v) {
-					var v = (layer_color[i][j][k].v + v_incr)%1;
-					setLayerColorHSV(i, j, k, undefined, undefined, v);
-				}
-				if (station_triggers[i][j]['L'+k].getTrigger("click", time, paint_cap_delta)) {
-					var h = (layer_color[i][j][k].h + h_incr)%1;
-					setLayerColorHSV(i, j, k, h, undefined, undefined);
-					station_update[i][j] = true;
-				}
-				if (station_triggers[i][j]['R'+k].getTrigger("click", time, paint_cap_delta)) {
-					var s = (layer_color[i][j][k].s + s_incr)%1;
-					setLayerColorHSV(i, j, k, undefined, s, undefined);
-					station_update[i][j] = true;
-				}
-			}
-		}
-	}
+    
+    if (rainbow_run == true){
+        for (var i=0; i<LO_config.rows; i++) {
+            for (var j=0; j<LO_config.cols; j++) {
+
+                var top_touch_val = 0.5;
+                var top_touch_bool = false;
+                if (station_triggers[i][j]["top"].getTrigger("click", time, rainbow_cap_delta)){
+                    top_touch_val = 0.0;
+                    top_touch_bool = true;
+                }
+                
+                if (station_triggers[i][j]["top"].getTrigger("click", time, rainbow_animation_interval)){
+                    rainbow_s_counter[i][j] = 0;
+                }
+
+                for (var k=0; k<LO_config.layers; k++) {
+                    var h = (rainbow_h_counter+1-0.2*i-0.04*j)%1;
+                    var s = 0;
+                        if (top_touch_bool) {
+                            s = top_touch_val+0.5-(rainbow_s_counter+0.1*k)%0.5;  
+                        } else {
+                            s = top_touch_val+0.5-(0.1*k)%0.5; 
+                        }
+                    
+                            
+
+                    setLayerColorHSV(i, j, k, h, s, undefined); //starts off completely dark with full saturation at about the hue blue
+                }
+                    
+                rainbow_s_counter[i][j] = rainbow_s_counter[i][j] + rainbow_s_incr;
+                rainbow_s_counter[i][j] = rainbow_s_counter[i][j] + rainbow_s_incr;
+            }
+        }
+        rainbow_h_counter = rainbow_h_counter + rainbow_h_incr;
+        updateAllStationsFlag();
+    }
 	updateAllStationsColor();
+    
 }
 
-function rainbowClearAll() {
-	for (var i=0; i<LO_config.rows; i++) {
-		for (var j=0; j<LO_config.cols; j++) {
-			for (var k=0; k<LO_config.layers; k++) {
-				setLayerColorHSV(i, j, k, 0.5, 1.0, 0.0); //starts off completely dark with full saturation at about the hue blue
-			}
-		}
-	}
-	updateAllStationsFlag();
-}
 
 function rainbowColors() {
-	for (var i=0; i<LO_config.rows; i++) {
-		for (var j=0; j<LO_config.cols; j++) {
-			for (var k=0; k<LO_config.layers; k++) {
-				setLayerColorHSV(i, j, k, 1-0.2*i-0.04*j, 1-0.1*k, 1.0); //starts off completely dark with full saturation at about the hue blue
-			}
-		}
-	}
+    rainbow_run = !rainbow_run;
+    if (rainbow_run == false){
+        for (var i=0; i<LO_config.rows; i++) {
+            for (var j=0; j<LO_config.cols; j++) {
+                for (var k=0; k<LO_config.layers; k++) {
+                    setLayerColorHSV(i, j, k, 0.5, 1.0, 0.0); //starts off completely dark with full saturation at about the hue blue
+                }
+            }
+        }
+    }
 	updateAllStationsFlag();
+    //console.log(rainbow_run);
 }
 
