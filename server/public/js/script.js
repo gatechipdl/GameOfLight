@@ -8,16 +8,15 @@ var LO_config = {
 }
 
 //ROMs
-var rom_list = [
-	{
-		name : "paint",
-		onclick : "initPaint()"
-	},
-	{
-		name : "game of light",
-		onclick : "initGOL()"
-	}
-];
+var rom_list = [];
+
+//init function when HTML body loads
+function init() {
+	generateStationTriggers();
+	createVisUI();
+	initLayerColor();
+	setTimeout(loadRoms(), 1000); //wait 1 sec and then load all the roms
+}
 
 // cap events coming into the system
 var station_triggers = [];
@@ -115,14 +114,6 @@ function generateStationTriggers() {
 //layer color variable
 var layer_color = [];
 var station_update = [];
-
-//init function when HTML body loads
-function init() {
-	generateStationTriggers();
-	createVisUI();
-	initLayerColor();
-	loadRoms();
-}
 
 function loadRoms() {
 	for (i in rom_list) {

@@ -3,6 +3,13 @@ var gol_animation_interval = 250;
 var gol_generation_interval = 2000;
 var generation_time = 0;
 
+rom_list.push(
+    {
+		name : "game of light",
+		onclick : "initGOL()"
+	}
+);
+
 var gol_rom_functions = [
 	{
         name : 'random',

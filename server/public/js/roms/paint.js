@@ -1,6 +1,13 @@
 var paint_cap_delta = 1000;
 var paint_animation_interval = 250;
 
+rom_list.push(
+	{
+		name : "paint",
+		onclick : "initPaint()"
+	}
+);
+
 var paint_rom_functions = [
 	{
 		name : 'clear all',
