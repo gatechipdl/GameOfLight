@@ -8,7 +8,7 @@ rom_list.push(
 	}
 );
 
-var rainbow_rom_functions = [];
+var rainbow2_rom_functions = [];
 
 function initRainbow2() {
 
