@@ -6,10 +6,11 @@
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "3016";
+const char* baseVersion = "3017";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
 #include <FastLED.h>
 #include <MPR121.h>
 #include <Wire.h>
@@ -18,12 +19,14 @@ const char* baseVersion = "3016";
 #include <SocketIoClient.h>
 #include "base64.h"
 
+
 FASTLED_USING_NAMESPACE
 
 #define LED_DATA_PIN 4
 #define BAUDRATE 115200
 #define LED_TYPE    WS2811
 #define LED_COLOR_ORDER GRB
+//#define LED_OFFSET 1
 #define LED_COUNT    45
 #define LED_SEGMENT_COUNT 5
 #define LED_PER_SEGMENT_COUNT 9
@@ -65,12 +68,22 @@ const char* wifi_pass = "";
 const char* server_ip = "192.168.0.100";
 SocketIoClient webSocket;
 
+
+WiFiUDP _udp;
+unsigned int _localUdpPort = 30000; //+stationId?
+#define UDP_MAX_INPUT_BYTE_COUNT  32
+char _udpIncomingPacket[UDP_MAX_INPUT_BYTE_COUNT];
+#define UDP_COMMAND_SETFIVES  5
+
+
+
+
 void chunkedDelay(int ms, int chunkSize);
 //void redraw();
 void checkForUpdate();
 void EEPROMWriteInt(int p_address, int p_value);
 unsigned int EEPROMReadInt(int p_address);
-//void udpEvent();
+void udpEvent();
 void readCapSenseInputs();
 void capSenseLEDUpdate();
 void PostSetupInitialization();
@@ -470,6 +483,63 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) 
 }
 
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   UDP
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void udpEvent(){
+  int packetSize = _udp.parsePacket();
+  //packet should be:
+  //2 bytes source port
+  //2 byte destination port
+  //2 byte length of whole packet including data payload and header (includes checksum)
+  //2 byte checksum
+  //the data payload bytes
+  
+  if (packetSize)
+  {
+    // receive incoming UDP packets
+    //Serial.printf("Received %d bytes from %s, port %d\n", packetSize, _udp.remoteIP().toString().c_str(), _udp.remotePort());
+    int len = _udp.read(_udpIncomingPacket, UDP_MAX_INPUT_BYTE_COUNT);
+    if (len > 0)
+    {
+      //first byte is the command byte
+      switch(_udpIncomingPacket[0]){
+        case UDP_COMMAND_SETFIVES:
+          for (int i = 0; i < LED_COUNT; i++) {
+            leds[i].r = (uint8_t)_udpIncomingPacket[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 0 + 1];
+            leds[i].g = (uint8_t)_udpIncomingPacket[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 2 + 1];
+            leds[i].b = (uint8_t)_udpIncomingPacket[(i / LED_PER_SEGMENT_COUNT) * COLOR_BYTE_COUNT + 1 + 1];
+          }
+          FastLED.show();
+        break;
+      }
+    }
+    //Serial.printf("UDP packet contents: %s\n", incomingPacket);
+  }
+}
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   CapSense
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 void readCapSenseInputs() {
   int i;
 
@@ -561,6 +631,8 @@ void setup() {
   webSocket.on("setMode", setModeSocketEventHandler);
   webSocket.on("setStationId", setStationIdSocketEventHandler);
   webSocket.begin(server_ip);
+
+  _udp.begin(_localUdpPort); //begin listening to UDP port for incoming data
   
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
@@ -627,7 +699,8 @@ void setup() {
 
 void loop() {
   webSocket.loop();
-  Operate();  
+  Operate();
+  udpEvent(); //check for udp events  
   
   //check for firmware updates once every ten minutes
   EVERY_N_SECONDS(600) {

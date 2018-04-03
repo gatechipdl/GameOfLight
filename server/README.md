@@ -96,7 +96,7 @@ CapSenseTouchListener(socket);
 ### Incoming Socket.IO Events from Web Client
 |Status|Message Name|Description|
 |---|---|---|
-|active|'SetFiveColors'|{'station_id":<#>, 'colors':[[255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0]]}|
+|active|'SetFiveColors'|{'station_id":<#>, 'colors':[ [255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0] ]}|
 |active|'SetMode'||
 |planned1|'setStationColors'|renaming of 'SetFiveColors'|
 |planned1|'setMode'|renaming of 'setMode'|
@@ -162,8 +162,8 @@ see Firmware Level API - Incoming UDP Events
 ### Incoming UDP Events from Web Server
 |Status|Message Name|Description|
 |---|---|---|
-|planned1|setFive|Set all 5 pixels on the station|
-|planned2|setOne|Set 1 of 5 pixels on the station|
+|planned1|SetFivesUDP(data)|{'station_id":<#>, 'colors':[ [255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0] ]}|
+|planned2|SetOneUDP(data)|Set 1 of 5 pixels on the station|
 ### Outgoing UDP Events to Web Server
 |Status|Message Name|Description|
 |---|---|---|

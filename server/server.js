@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3016;
+const baseVersion = 3018;
 
 const express = require('express');
 const app = express();
@@ -14,7 +14,7 @@ const md5 = require('md5-file');
 
 const dgram = require('dgram');
 const udpSocket = dgram.createSocket('udp4');
-var udpPortSend = 60000;
+var udpPortSend = 30000; //all stations listen to UDP on port 30000
 //var udpMulticastIP = '230.185.192.109';
 var udpPortRecv = 60001;
 var udpDestIP = '192.168.1.199';
@@ -478,7 +478,7 @@ function SetFiveColorsListener(socket){
         if (data['log']) {
             console.dir(data);
         }
-        socket.broadcast.emit('SetFiveColors',data);
+        socket.broadcast.emit('SetFiveColors',data); //for logging purposes
         /*
         {
         station_id:'asdf',
@@ -491,18 +491,20 @@ function SetFiveColorsListener(socket){
         ]
         }
         */
-        fiveColors = data['colors'];
-
-        var dataBuffer = new Uint8Array([
-            fiveColors[0][0],fiveColors[0][1],fiveColors[0][2],
-            fiveColors[1][0],fiveColors[1][1],fiveColors[1][2],
-            fiveColors[2][0],fiveColors[2][1],fiveColors[2][2],
-            fiveColors[3][0],fiveColors[3][1],fiveColors[3][2],
-            fiveColors[4][0],fiveColors[4][1],fiveColors[4][2]
-        ]);
-
-        var data64 = base64js.fromByteArray(dataBuffer);
-        socket.broadcast.to(data['station_id']).emit('setFives',data64);
+//        fiveColors = data['colors'];
+//
+//        var dataBuffer = new Uint8Array([
+//            fiveColors[0][0],fiveColors[0][1],fiveColors[0][2],
+//            fiveColors[1][0],fiveColors[1][1],fiveColors[1][2],
+//            fiveColors[2][0],fiveColors[2][1],fiveColors[2][2],
+//            fiveColors[3][0],fiveColors[3][1],fiveColors[3][2],
+//            fiveColors[4][0],fiveColors[4][1],fiveColors[4][2]
+//        ]);
+//
+//        var data64 = base64js.fromByteArray(dataBuffer);
+//        socket.broadcast.to(data['station_id']).emit('setFives',data64);
+        
+        SetFivesUDP(data); //route through to UDP
     });
 }
 
@@ -626,9 +628,38 @@ udpSocket.bind(udpPortRecv, () => {});
 //});
 
 
+function sendUDPSocket(msg,nodeIdString){
+    //console.log('sending UDP Socket');
+    if(clientSockets.hasOwnProperty(nodeIdString)){
+        //console.log('sending to '+nodeIdString+' at '+clientSockets[nodeIdString]['ipaddress']);
+        udpSocket.send(msg,0,msg.length,udpPortSend,clientSockets[nodeIdString]['ipaddress']);
+    }
+}
 
+const UDP_COMMAND_SETFIVES = 5;
 
-
+function SetFivesUDP(data){
+    //{'station_id":<#>, 'colors':[ [255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0] ]}
+    var msg = new Buffer.from([
+        UDP_COMMAND_SETFIVES,//COMMAND byte
+        data['colors'][0][0],
+        data['colors'][0][1],
+        data['colors'][0][2],
+        data['colors'][1][0],
+        data['colors'][1][1],
+        data['colors'][1][2],
+        data['colors'][2][0],
+        data['colors'][2][1],
+        data['colors'][2][2],
+        data['colors'][3][0],
+        data['colors'][3][1],
+        data['colors'][3][2],
+        data['colors'][4][0],
+        data['colors'][4][1],
+        data['colors'][4][2]
+        ]);
+    sendUDPSocket(msg,data['station_id']);
+}
 
 
 
@@ -1009,34 +1040,7 @@ var doStuff2 = function(){
 //setInterval(doStuff2,10000/60);
 
 
-function sendUDPSocket(msg,nodeIdString){
-    //console.log('sending UDP Socket');
-    if(clientSockets.hasOwnProperty(nodeIdString)){
-        //console.log('sending to '+nodeIdString+' at '+clientSockets[nodeIdString]['ipaddress']);
-        udpSocket.send(msg,0,msg.length,udpPortSend,clientSockets[nodeIdString]['ipaddress']);
-    }
-}
 
-function udpSendColors(){
-    var msg = new Buffer.from([
-        fiveColors[0].r,
-        fiveColors[0].g,
-        fiveColors[0].b,
-        fiveColors[1].r,
-        fiveColors[1].g,
-        fiveColors[1].b,
-        fiveColors[2].r,
-        fiveColors[2].g,
-        fiveColors[2].b,
-        fiveColors[3].r,
-        fiveColors[3].g,
-        fiveColors[3].b,
-        fiveColors[4].r,
-        fiveColors[4].g,
-        fiveColors[4].b]
-                             );
-    sendUDPSocket(msg,'7');
-}
 
 var doStuff3 = function(){
     hue = (hue+1)%hueBase;
