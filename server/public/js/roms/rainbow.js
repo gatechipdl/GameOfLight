@@ -1,5 +1,5 @@
 var rainbow_cap_delta = 3000;
-var rainbow_animation_interval = 100;
+var rainbow_animation_interval = 50;
 
 rom_list.push({
     name: "rainbow",
