@@ -1,12 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-//use Flash size 4MB (1M SPIFFS)
+//***use Flash size 4MB (1M SPIFFS)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //Flash real id:   001640EF
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //Flash real size: 4194304
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+//Using Arduino ESP8266 Library version 2.5
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "4000";
+const char* baseVersion = "4001";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -23,7 +25,7 @@ const char* baseVersion = "4000";
 FASTLED_USING_NAMESPACE
 
 #define LED_DATA_PIN 4
-#define BAUDRATE 115200
+#define BAUD_RATE 115200
 #define LED_TYPE    WS2811
 #define LED_COLOR_ORDER GRB
 //#define LED_OFFSET 1
@@ -353,7 +355,7 @@ void getInfoSocketEventHandler(const char * payload, size_t payloadLength) {
   webSocket.emit("idhostnameipmac",
                  ("\"" + stationId_str + ","
                   + String(WiFi.hostname()) + ","
-                  + String(WiFi.localIP()) + ","
+                  + String(WiFi.localIP().toString()) + ","
                   + String(mac[0], HEX) + ","
                   + String(mac[1], HEX) + ","
                   + String(mac[2], HEX) + ","
@@ -540,6 +542,7 @@ void udpEvent(){
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
 void readCapSenseInputs() {
   int i;
 
@@ -608,9 +611,16 @@ unsigned int EEPROMReadInt(int p_address)
 
 
 void setup() {
-  Serial.begin(BAUDRATE);
+  Serial.begin(BAUD_RATE);
   Serial.setDebugOutput(true);
   Serial.println("Booting up");
+
+  //read the station ID asap
+  EEPROM.begin(512);
+  stationId = EEPROMReadInt(0);
+  Serial.print("stationId is: ");
+  Serial.println(stationId);
+  EEPROM.end();
 
   WiFi.mode(WIFI_OFF);
   WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
@@ -689,17 +699,12 @@ void setup() {
     satSteps[i] = satStepMag;
   }
   capSenseLEDUpdate();
-
-  EEPROM.begin(512);
-  stationId = EEPROMReadInt(0);
-  Serial.print("stationId is: ");
-  Serial.println(stationId);
-  EEPROM.end();
 }
 
 void loop() {
   webSocket.loop();
   Operate();
+  udpEvent(); //check for udp events  
   udpEvent(); //check for udp events  
   
   //check for firmware updates once every ten minutes
