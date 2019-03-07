@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 4000;
+const BASE_VERSION = 4000;
 
 const express = require('express');
 const app = express();
@@ -11,13 +11,22 @@ const base64js = require('base64-js');
 const path = require('path');
 const fs = require('fs');
 const md5 = require('md5-file');
-
 const dgram = require('dgram');
 const udpSocket = dgram.createSocket('udp4');
-var udpPortSend = 30000; //all stations listen to UDP on port 30000
-//var udpMulticastIP = '230.185.192.109';
-var udpPortRecv = 60001;
-var udpDestIP = '192.168.1.199';
+
+var _webserverPort = 80;
+var _udpPortSend = 30000; //all stations listen to UDP on port 30000
+//var udpMulticastIP = '230.185.192.109'; //not being used
+//var udpPortRecv = 60001; //not being used
+//var udpDestIP = '192.168.1.199'; //not being used
+
+const MAX_STATION_COUNT = 36;
+const LED_CLUSTER_COUNT = 45; // actual LED count is 45*3 = 135
+//the locally stored color array for each station
+var _colors = new Array(MAX_STATION_COUNT).fill(new Array(LED_CLUSTER_COUNT).fill(new CRGB(0, 0, 0)));
+
+
+
 
 
 // host everything in the public folder
@@ -29,8 +38,8 @@ app.get('/update/base', function (req, res) {
 
     console.log('a device is requesting an update');
     //console.dir(req.headers);
-    if (parseInt(req.headers['x-esp8266-version']) != baseVersion) { //could be <
-        var full_path = path.join(__dirname, '/bin/base' + baseVersion + '.bin');
+    if (parseInt(req.headers['x-esp8266-version']) != BASE_VERSION) { //could be <
+        var full_path = path.join(__dirname, '/bin/base' + BASE_VERSION + '.bin');
         fs.readFile(full_path, "binary", function (err, file) {
             if (err) {
                 console.log('error uploading new firmware');
@@ -63,8 +72,9 @@ app.get('/update/base', function (req, res) {
 });
 
 
-var port = 80;
-server.listen(port);
+
+//spin up the webserver
+server.listen(_webserverPort);
 
 
 
@@ -83,7 +93,11 @@ server.listen(port);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-var stationData = {
+
+
+//uses json object instead of an array in order to use the mac address as the key for faster lookup
+//potential improvements - switch to an array, but build a lookup table with key value pairs for the array index
+var _stationData = {
     "60-01-94-10-89-E1": {
         "online": false,
         "id": 2000,
@@ -96,6 +110,9 @@ var stationData = {
     }
 };
 
+
+
+//copied from the station firmware for reference
 //var operationModes = {
 //    0:'SlaveListen',
 //    1:'StrandTest1',
@@ -106,58 +123,78 @@ var stationData = {
 //    6:'CapSenseControlTop'
 //}
 
+
+
 function loadStationData() {
     try {
         var dataFile = fs.readFileSync('./data/stations.json');
-        stationData = JSON.parse(dataFile);
+        _stationData = JSON.parse(dataFile);
     } catch (err) {
         console.log('stations.json file did not exist');
     }
 
 }
-loadStationData(); //get stationData on server start
+
+
+loadStationData(); //get _stationData on server start
 resetStationData();
+
+
 
 function saveStationData() {
     console.log("saving station data");
-    var dataJSON = JSON.stringify(stationData);
+    var dataJSON = JSON.stringify(_stationData);
     fs.writeFileSync('./data/stations.json', dataJSON);
 }
 
+
+
 // removes all data entries
 function clearStationData() {
-    Object.keys(stationData).forEach(function (key) {
-        delete stationData[key];
+    Object.keys(_stationData).forEach(function (key) {
+        delete _stationData[key];
     });
 }
+
+
 
 // sets all data entries' online to false
 // run at start
 function resetStationData() {
-    Object.keys(stationData).forEach(function (key) {
-        stationData[key]['online'] = false;
+    Object.keys(_stationData).forEach(function (key) {
+        _stationData[key]['online'] = false;
     });
 }
+
+
 
 function updateStationData(data) {
     Object.keys(data).forEach(function (key) {
-        if (stationData.hasOwnProperty(key)) {
-            Object.assign(stationData[key], data[key]); //merge data
+        if (_stationData.hasOwnProperty(key)) {
+            Object.assign(_stationData[key], data[key]); //merge data
         } else {
-            stationData[key] = data[key]; //add data
+            _stationData[key] = data[key]; //add data
         }
 
     });
-    io.sockets.emit('syncStationData', stationData);
+    io.sockets.emit('syncStationData', _stationData);
 }
 
+
+
+//helper function to convert a 32-bit int into a string IP address - Big Endian or Little Endian, not sure which
 function int2ip(ipInt) {
     return ((ipInt >>> 24) + '.' + (ipInt >> 16 & 255) + '.' + (ipInt >> 8 & 255) + '.' + (ipInt & 255));
 }
 
+
+
+//helper function to convert a 32-bit int into a string IP address - Little Endian or Big Endian, not sure which
 function int2ipReverse(ipInt) {
     return ((ipInt & 255) + '.' + (ipInt >> 8 & 255) + '.' + (ipInt >> 16 & 255) + '.' + (ipInt >>> 24));
 }
+
+
 
 function stationDataListener(socket) {
     socket.on('idhostnameipmac', function (data) {
@@ -197,27 +234,31 @@ function stationDataListener(socket) {
     });
 }
 
-function GetIPAddressFromStationID(station_id) {
+
+
+function getIPAddressFromStationID(station_id) {
     var ip = 0;
-    Object.keys(stationData).forEach(function (key) {
-        if (stationData[key]['id'] == station_id) {
-            ip = stationData[key]['ip'];
+    Object.keys(_stationData).forEach(function (key) {
+        if (_stationData[key]['id'] == station_id) {
+            ip = _stationData[key]['ip'];
         }
     });;
     return int2ipReverse(ip);
 }
 
+
+
 //changes the id value of a number
-function setstation_idListener(socket) {
+function setstationIdListener(socket) {
     socket.on('setstation_id', function (data) {
         if (!isNaN(data['station_id'])) {
             if (Number.parseInt(data['station_id'])) {
-                console.log('setting mac ' + data['mac'] + ' to station ' + data['station_id'] + " through socket: " + [stationData[data['mac']]['socket']]);
+                console.log('setting mac ' + data['mac'] + ' to station ' + data['station_id'] + " through socket: " + [_stationData[data['mac']]['socket']]);
                 var dataBuff16 = new Uint16Array([data['station_id']]);
                 console.log('dataBuff16 ', dataBuff16);
                 var dataBuff8 = new Uint8Array(dataBuff16.buffer);
                 console.log('dataBuff8 ', dataBuff8);
-                socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setstation_id', base64js.fromByteArray(dataBuff8));
+                socket.broadcast.to([_stationData[data['mac']]['socket']]).emit('setstation_id', base64js.fromByteArray(dataBuff8));
                 //update station data
 
                 updateStationData({
@@ -235,11 +276,13 @@ function setstation_idListener(socket) {
     })
 }
 
+
+
 function setStationModeListener(socket) {
     socket.on('setStationMode', function (data) {
         console.log('setting mac ' + data['mac'] + ' to mode ' + data['modeId']);
         var data64 = base64js.fromByteArray(new Uint8Array([data['modeId']]));
-        socket.broadcast.to([stationData[data['mac']]['socket']]).emit('setMode', data64);
+        socket.broadcast.to([_stationData[data['mac']]['socket']]).emit('setMode', data64);
         updateStationData({
             [data['mac']]: {
                 'mode': data['modeId']
@@ -252,12 +295,14 @@ function setStationModeListener(socket) {
 
 function pingStationListener(socket) {
     socket.on('pingStation', function (data) {
-        console.log('pinging mac ' + data['mac'] + ' at station number ' + stationData[data['mac']]['id']);
+        console.log('pinging mac ' + data['mac'] + ' at station number ' + _stationData[data['mac']]['id']);
         //var dataBuffer = new Uint8Array([startIndex,numToFill,ledColor.r,ledColor.g,ledColor.b]);
         var dataBuffer = new Uint8Array([0, 45, 0, 255, 0]); //all green
-        socket.broadcast.to([stationData[data['mac']]['socket']]).emit('fillSolid', base64js.fromByteArray(dataBuffer));
+        socket.broadcast.to([_stationData[data['mac']]['socket']]).emit('fillSolid', base64js.fromByteArray(dataBuffer));
     });
 }
+
+
 
 function messageListener(socket) {
     socket.on('message', function (data) {
@@ -265,12 +310,16 @@ function messageListener(socket) {
     });
 }
 
+
+
 function checkForUpdateListener(socket) {
     socket.on('checkForUpdate', function (data) {
-        console.log('trigging check for firmware update on mac ' + data['mac'] + ' at station number ' + stationData[data['mac']]['id']);
-        socket.broadcast.to([stationData[data['mac']]['socket']]).emit('checkForUpdate', "");
+        console.log('trigging check for firmware update on mac ' + data['mac'] + ' at station number ' + _stationData[data['mac']]['id']);
+        socket.broadcast.to([_stationData[data['mac']]['socket']]).emit('checkForUpdate', "");
     });
 }
+
+
 
 function saveStationDataListener(socket) {
     socket.on('saveStationData', function (data) {
@@ -279,31 +328,33 @@ function saveStationDataListener(socket) {
     });
 }
 
+
+
 function recoverStationDataListener(socket) {
     socket.on('recoverStationData', function (data) {
         console.log('trying to recover Station Ids');
-        var stationDataBackup = stationData;
+        let stationDataBackup = _stationData;
 
         loadStationData(); //no callback
         //assume this happened instantly - bad assumption
         console.log('trying to loading current socket data');
-        Object.keys(stationData).forEach(function (key) {
-            stationData[key]['socket'] = stationDataBackup[key]['socket'];
+        Object.keys(_stationData).forEach(function (key) {
+            _stationData[key]['socket'] = stationDataBackup[key]['socket'];
         });
 
-        io.sockets.emit('syncStationData', stationData);
+        io.sockets.emit('syncStationData', _stationData);
         console.log('setting station Ids from recovered data file');
-        Object.keys(stationData).forEach(function (key) {
-            stationData[key]['online'] = false;
+        Object.keys(_stationData).forEach(function (key) {
+            _stationData[key]['online'] = false;
 
-            if (!isNaN(stationData[key]['id'])) {
-                if (Number.parseInt(stationData[key]['id'])) {
-                    console.log('setting mac ' + stationData[key]['mac'] + ' to station ' + stationData[key]['id'] + " through socket: " + stationData[key]['socket']);
-                    var dataBuff16 = new Uint16Array([stationData[key]['id']]);
+            if (!isNaN(_stationData[key]['id'])) {
+                if (Number.parseInt(_stationData[key]['id'])) {
+                    console.log('setting mac ' + _stationData[key]['mac'] + ' to station ' + _stationData[key]['id'] + " through socket: " + _stationData[key]['socket']);
+                    var dataBuff16 = new Uint16Array([_stationData[key]['id']]);
                     console.log('dataBuff16 ', dataBuff16);
                     var dataBuff8 = new Uint8Array(dataBuff16.buffer);
                     console.log('dataBuff8 ', dataBuff8);
-                    socket.broadcast.to([stationData[key]['socket']]).emit('setstation_id', base64js.fromByteArray(dataBuff8));
+                    socket.broadcast.to([_stationData[key]['socket']]).emit('setstation_id', base64js.fromByteArray(dataBuff8));
                     //update station data
                 } else {
                     console.log('id not an integer: ' + data);
@@ -315,6 +366,8 @@ function recoverStationDataListener(socket) {
         });
     });
 }
+
+
 
 //stations = [
 //    ESP_1089E5	60-01-94-10-89-E5	192.168.0.102	01:09:16
@@ -352,6 +405,8 @@ function recoverStationDataListener(socket) {
 //34	ESP_107FB3	60-01-94-10-7F-B3
 
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -361,7 +416,7 @@ function recoverStationDataListener(socket) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-function CapSenseListener(socket) {
+function capSenseListener(socket) {
     socket.on('capSense', function (data) { //TODO: modify firmware to emit use 'CapSenseEvent'
         console.log('capsense: ' + data);
         var cData = data.split(","); //station, cap, state
@@ -461,7 +516,7 @@ function setFiveHueColorsListener(socket) {
         //        //io.sockets.emit('setFives', data64);
 
 
-        var colors = [
+        let colors = [
             [fiveColors[0].r, fiveColors[0].g, fiveColors[0].b],
             [fiveColors[1].r, fiveColors[1].g, fiveColors[1].b],
             [fiveColors[2].r, fiveColors[2].g, fiveColors[2].b],
@@ -470,7 +525,7 @@ function setFiveHueColorsListener(socket) {
                 ];
 
         for (var i = 1; i < 26; i++) {
-            SetFivesUDP({
+            setFivesUDP({
                 'station_id': i,
                 'colors': colors
             });
@@ -507,7 +562,7 @@ function setTreeColorListener(socket) {
 }
 
 
-function SetFiveColorsListener(socket) {
+function setFiveColorsListener(socket) {
     socket.on('SetFiveColors', function (data) {
         if (data['log']) {
             console.dir(data);
@@ -538,12 +593,46 @@ function SetFiveColorsListener(socket) {
         //        var data64 = base64js.fromByteArray(dataBuffer);
         //        socket.broadcast.to(data['station_id']).emit('setFives',data64);
 
-        SetFivesUDP(data); //route through to UDP
+        setFivesUDP(data); //route through to UDP
     });
 }
 
-function setAllColorsListener(socket) {
-    socket.on('setAllColors', function (data) {
+
+
+function setMultipleFiveColorsListener(socket) {
+    socket.on('setMultipleFiveColors', function (data) {
+        if (data['log']) {
+            console.dir(data);
+        }
+        /*
+        {'stations':[
+            {station_id:'asdf',
+            colors:[
+            [255,255,255],
+            [255,255,255],
+            [255,255,255],
+            [255,255,255],
+            [255,255,255]
+            ]},
+            {},
+            {}...
+        ]}
+        */
+        if(data.hasOwnProperty('stations')){
+            if(Array.isArray((data['stations']))){
+                (data['stations']).forEach(function(stationColorSet){
+                    setFivesUDP(stationColorSet); //route through to UDP
+                })
+            }
+        }
+    });
+}
+
+
+
+//sets one station's colors to the same color
+function setColumnarColorsListener(socket) {
+    socket.on('setColumnarColors', function (data) {
         //console.dir(data);
         /*
         {
@@ -553,7 +642,7 @@ function setAllColorsListener(socket) {
         }
         */
         var theColor = data['color'];
-        FillSolid(data['station_id'], 0, 45, new CRGB(theColor[0], theColor[1], theColor[2]));
+        fillSolid(data['station_id'], 0, 45, new CRGB(theColor[0], theColor[1], theColor[2]));
     });
 }
 
@@ -629,6 +718,10 @@ function clearColorsListener(socket) {
 //}
 
 
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -638,6 +731,8 @@ function clearColorsListener(socket) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 //udpSocket.on('error', (err) => {
 //    console.log('udp socket error:\n${err.stack}');
@@ -664,9 +759,10 @@ function clearColorsListener(socket) {
 ////});
 
 
+
 function sendUDPSocket(msg, station_id) {
     //console.log('sending UDP Socket');
-    var ip = GetIPAddressFromStationID(station_id);
+    let ip = getIPAddressFromStationID(station_id);
     if (ip) {
         udpSocket.send(msg, 0, msg.length, udpPortSend, ip);
         //console.log([station_id, ip, udpPortSend, msg.length])
@@ -675,9 +771,9 @@ function sendUDPSocket(msg, station_id) {
 
 const UDP_COMMAND_SETFIVES = 5;
 
-function SetFivesUDP(data) {
+function setFivesUDP(data) {
     //{'station_id":<#>, 'colors':[ [255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0] ]}
-    var msg = new Buffer.from([
+    let msg = new Buffer.from([
         UDP_COMMAND_SETFIVES, //COMMAND byte
         data['colors'][0][0],
         data['colors'][0][1],
@@ -727,7 +823,7 @@ var clientSockets = {};
 
 io.on('connection', function (socket) {
     console.log("client " + socket['id'] + " connected");
-    //ClearAll();
+    //clearAll();
 
     stationDataListener(socket);
     messageListener(socket);
@@ -740,12 +836,12 @@ io.on('connection', function (socket) {
         var idx = tAddress.replace(/^.*:/, ''); //chop down ipv6 to ipv4
         console.log("station client " + socket['id'] + " joined room " + roomName + " at ip: " + idx);
 
-        CheckForUpdate(roomName);
-        CapSenseListener(socket);
+        checkForUpdate(roomName);
+        capSenseListener(socket);
 
         socket.on('disconnect', function () {
-            Object.keys(stationData).forEach(function (key) {
-                if (stationData[key]['socketId'] === socket['id']) {
+            Object.keys(_stationData).forEach(function (key) {
+                if (_stationData[key]['socketId'] === socket['id']) {
                     updateStationData({
                         [key]: {
                             "online": false
@@ -777,10 +873,10 @@ io.on('connection', function (socket) {
         });
 
         if (roomName == 'browsers') {
-            socket.emit('syncStationData', stationData);
+            socket.emit('syncStationData', _stationData);
 
             //for manager.html
-            setstation_idListener(socket);
+            setstationIdListener(socket);
             setStationModeListener(socket);
             pingStationListener(socket);
             checkForUpdateListener(socket);
@@ -793,18 +889,15 @@ io.on('connection', function (socket) {
             checkForUpdatesListener(socket);
             setFiveHueColorsListener(socket);
             setTreeColorListener(socket);
-            SetFiveColorsListener(socket);
-            setAllColorsListener(socket);
+            setFiveColorsListener(socket);
+            setMultipleFiveColorsListener(socket);
+            setColumnarColorsListener(socket);
             clearColorsListener(socket);
         }
     });
 });
 
-const STATION_COUNT = 36;
-const LED_CLUSTER_COUNT = 45; // actual LED count is 45*3 = 135
 
-//the locally stored color array for each station
-var colors = new Array(STATION_COUNT).fill(new Array(LED_CLUSTER_COUNT).fill(new CRGB(0, 0, 0)));
 
 
 /*
@@ -830,51 +923,59 @@ function CRGB(red, green, blue) {
     }
 }
 
+
+
 /*
  * Turn off LEDs on a specific station
  */
-function Clear(station_id) {
+function clear(station_id) {
     io.sockets.to(station_id).emit('clear', '');
 }
+
+
 
 /*
  * Turn off LEDs on all stations
  */
-function ClearAll() {
+function clearAll() {
     io.sockets.to('stations').emit('clear', '');
 }
+
+
 
 /*
  * mimics FastLED FillSolid method
  */
-function FillSolid(station_id, startIndex, numToFill, ledColor) {
+function fillSolid(station_id, startIndex, numToFill, ledColor) {
     if (!isNaN(station_id)) {
         //update server's copy of the LED cluster state
         for (var i = startIndex; i < startIndex + numToFill; i++) {
-            colors[station_id][i].r = ledColor.r;
-            colors[station_id][i].g = ledColor.g;
-            colors[station_id][i].b = ledColor.b;
+            _colors[station_id][i].r = ledColor.r;
+            _colors[station_id][i].g = ledColor.g;
+            _colors[station_id][i].b = ledColor.b;
         }
     }
-    //console.log(ledColor);
-    var dataBuffer = new Uint8Array([startIndex, numToFill, ledColor.r, ledColor.g, ledColor.b]);
+    let dataBuffer = new Uint8Array([startIndex, numToFill, ledColor.r, ledColor.g, ledColor.b]);
     io.sockets.to(station_id).emit('fillSolid', base64js.fromByteArray(dataBuffer));
 }
+
+
 
 /*
  * Set a single LED color on a specific station
  */
-function SetColor(station_id, startIndex, ledColor) {
+function setOneColor(station_id, startIndex, ledColor) {
     if (!isNaN(station_id)) {
         //update server's copy of the LED custer state
-        colors[station_id][startIndex].r = ledColor.r;
-        colors[station_id][startIndex].g = ledColor.g;
-        colors[station_id][startIndex].b = ledColor.b;
+        _colors[station_id][startIndex].r = ledColor.r;
+        _colors[station_id][startIndex].g = ledColor.g;
+        _colors[station_id][startIndex].b = ledColor.b;
     }
-
-    var dataBuffer = new Uint8Array([startIndex, ledColor.r, ledColor.g, ledColor.b]);
+    let dataBuffer = new Uint8Array([startIndex, ledColor.r, ledColor.g, ledColor.b]);
     io.sockets.to(station_id).emit('setColor', dataBuffer);
 }
+
+
 
 /*
  * Send a set of different colors to a subset of a specific station
@@ -882,28 +983,30 @@ function SetColor(station_id, startIndex, ledColor) {
  * the number of leds is computed by the lenth of the colorArray
  * colorArray is an array of CRGB
  */
-function SetColors(station_id, startIndex, colorArray) {
+function setMultipleColors(station_id, startIndex, colorArray) {
     //update server's copy of the LED custer state
-    colors[station_id][ledIndex].r = ledColor.r;
-    colors[station_id][ledIndex].g = ledColor.g;
-    colors[station_id][ledIndex].b = ledColor.b;
+    _colors[station_id][ledIndex].r = ledColor.r;
+    _colors[station_id][ledIndex].g = ledColor.g;
+    _colors[station_id][ledIndex].b = ledColor.b;
 
     var dataBuffer = new Uint8Array([ledIndex, numToFill, ledColor.r, ledColor.g, ledColor.b]);
     io.sockets.to(station_id).emit('setColors', dataBuffer);
 }
 
+
+
 /*
  * GOL Station 5 segment code
  */
-function SetFiveColors(station_id, fiveColorArray) {
+function setFiveColors(station_id, fiveColorArray) {
     if (!isNaN(station_id)) {
         //update server's copy of the LED custer state
-        if (station_id < STATION_COUNT) {
+        if (station_id < MAX_STATION_COUNT) {
             for (var i = 0; i < 5; i++) {
                 for (var j = 0; j < LED_CLUSTER_COUNT / 5; j++) {
-                    colors[station_id][i * 9 + j].r = fiveColorArray[i].r;
-                    colors[station_id][i * 9 + j].g = fiveColorArray[i].g;
-                    colors[station_id][i * 9 + j].b = fiveColorArray[i].b;
+                    _colors[station_id][i * 9 + j].r = fiveColorArray[i].r;
+                    _colors[station_id][i * 9 + j].g = fiveColorArray[i].g;
+                    _colors[station_id][i * 9 + j].b = fiveColorArray[i].b;
                 }
             }
         }
@@ -944,38 +1047,49 @@ function SetFiveColors(station_id, fiveColorArray) {
     //console.log(base64js.fromByteArray(dataBuffer2));
 }
 
+
+
 /*
- * Set the colors on the stations to the colors stored on the server
+ * Set the colors on the stations to the _colors stored on the server
  * typially used on startup to retrieve the last stored state of the system
  */
-function SyncColorsFromServer() {
-    for (var i = 0; i < STATION_COUNT; i++) {
-        SetColors(i, 0, colors[i]);
+function syncColorsFromServer() {
+    for (var i = 0; i < MAX_STATION_COUNT; i++) {
+        setMultipleColors(i, 0, _colors[i]);
     }
 }
+
+
 
 /*
  * sets entire strip colors at once
  * typically used for loading last saved state
  * or used for more efficient devliery of complete color changes
  */
-function SetStrip(station_id, colorArray) {
+function setStrip(station_id, colorArray) {
 
 }
+
+
 
 /*
  * Force clients to check for firmware updates
  */
-function CheckForUpdate(station_id) {
+function checkForUpdate(station_id) {
     io.sockets.to(station_id).emit('checkForUpdate', "");
 }
+setInterval(checkForUpdate, 600000);
+
+
 
 /*
  *
  */
-function RequestStationInfo(socketId) {
+function requestStationInfo(socketId) {
     io.sockets.to(socketId).emit('getInfo', "");
 }
+
+
 
 function requestStationInfoListener(socket) {
     socket.on('requestStationInfo', function () {
@@ -983,6 +1097,8 @@ function requestStationInfoListener(socket) {
         io.sockets.emit('getInfo', "");
     });
 }
+
+
 
 /*
  * Helper method for HSV color model
@@ -1028,8 +1144,15 @@ function HSVtoRGB(h, s, v) {
 
 
 
-
-
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Test Area
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 /*
@@ -1045,7 +1168,7 @@ var fiveColors = new Array(5).fill(new CRGB(0, 0, 0));
 var doStuff1 = function () {
     hue = (hue + 6) % hueBase;
     var t_hue = hue;
-    for (var i = 0; i < STATION_COUNT; i++) {
+    for (var i = 0; i < MAX_STATION_COUNT; i++) {
         t_hue = (hue + 1) % hueBase;
         fiveColors[0] = HSVtoRGB(t_hue / (hueBase), 1.0, 1.0);
         t_hue = (hue + 2) % hueBase;
@@ -1057,7 +1180,7 @@ var doStuff1 = function () {
         t_hue = (hue + 5) % hueBase;
         fiveColors[4] = HSVtoRGB(t_hue / (hueBase), 1.0, 1.0);
 
-        SetFiveColors(i, fiveColors);
+        setFiveColors(i, fiveColors);
     }
 
     fiveColors[0] = HSVtoRGB(0.0, 1.0, 1.0);
@@ -1065,7 +1188,7 @@ var doStuff1 = function () {
     fiveColors[2] = HSVtoRGB(0.0, 1.0, 1.0);
     fiveColors[3] = HSVtoRGB(0.0, 1.0, 1.0);
     fiveColors[4] = HSVtoRGB(0.0, 1.0, 1.0);
-    SetFiveColors(24932, fiveColors);
+    setFiveColors(24932, fiveColors);
 
     console.log(fiveColors[0]);
 
@@ -1082,8 +1205,8 @@ var doStuff2 = function () {
     fiveColors[2] = HSVtoRGB(hue2 / (hueBase), 1.0, 1.0);
     fiveColors[3] = HSVtoRGB(hue2 / (hueBase), 1.0, 1.0);
     fiveColors[4] = HSVtoRGB(hue2 / (hueBase), 1.0, 1.0);
-    SetFiveColors('allStations', fiveColors);
-    console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+    setFiveColors('allStations', fiveColors);
+    console.log(fiveColors[0]); //fillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
 }
 //setInterval(doStuff2,10000/60);
 
@@ -1098,9 +1221,9 @@ var doStuff3 = function () {
     fiveColors[2] = HSVtoRGB(hue2 / (hueBase), 1.0, 1.0);
     fiveColors[3] = HSVtoRGB(hue2 / (hueBase), 1.0, 1.0);
     fiveColors[4] = HSVtoRGB(hue2 / (hueBase), 1.0, 1.0);
-    SetFiveColors('stations', fiveColors);
+    setFiveColors('stations', fiveColors);
 
-    console.log(fiveColors[0]); //FillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
+    console.log(fiveColors[0]); //fillSolid('allStations',0,LED_CLUSTER_COUNT,HSVtoRGB(hue/(hueBase),1.0,1.0));
     udpSendColors();
 }
 
@@ -1133,4 +1256,3 @@ var doStuff4 = function () {
 }
 //setInterval(doStuff2,100000/60);
 //setInterval(doStuff4,1000/30);
-setInterval(CheckForUpdate, 600000);
