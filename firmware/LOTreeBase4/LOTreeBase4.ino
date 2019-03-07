@@ -8,7 +8,7 @@
 //Using Arduino ESP8266 Library version 2.5
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "4001";
+const char* baseVersion = "4002";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -67,7 +67,7 @@ bool cap_curr[CAPSENSE_COUNT]; //curr state
 
 const char* wifi_ssid     = "Orchard";
 const char* wifi_pass = "";
-const char* server_ip = "192.168.1.100";
+const char* server_ip = "192.168.1.100"; //make sure to change this in the checkUpdate() method too
 SocketIoClient webSocket;
 
 
@@ -294,7 +294,7 @@ void CapSenseControlTop() {
 
 void checkForUpdate() {
   Serial.printf("checking for firmware update\n");
-  t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.100:80/update/base", baseVersion);
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.1.100:80/update/base", baseVersion);
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:
