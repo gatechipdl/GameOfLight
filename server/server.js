@@ -1,6 +1,6 @@
 'use strict';
 
-const baseVersion = 3018;
+const baseVersion = 4000;
 
 const express = require('express');
 const app = express();
@@ -450,17 +450,17 @@ function setFiveHueColorsListener(socket) {
         t_hue = (hue + 50) % hueBase;
         fiveColors[4] = HSVtoRGB(t_hue / (hueBase), 1.0, 1.0);
 
-//        var dataBuffer = new Uint8Array([
-//            fiveColors[0].r, fiveColors[0].g, fiveColors[0].b,
-//            fiveColors[1].r, fiveColors[1].g, fiveColors[1].b,
-//            fiveColors[2].r, fiveColors[2].g, fiveColors[2].b,
-//            fiveColors[3].r, fiveColors[3].g, fiveColors[3].b,
-//            fiveColors[4].r, fiveColors[4].g, fiveColors[4].b
-//        ]);
-//        var data64 = base64js.fromByteArray(dataBuffer);
-//        //io.sockets.emit('setFives', data64);
-        
-        
+        //        var dataBuffer = new Uint8Array([
+        //            fiveColors[0].r, fiveColors[0].g, fiveColors[0].b,
+        //            fiveColors[1].r, fiveColors[1].g, fiveColors[1].b,
+        //            fiveColors[2].r, fiveColors[2].g, fiveColors[2].b,
+        //            fiveColors[3].r, fiveColors[3].g, fiveColors[3].b,
+        //            fiveColors[4].r, fiveColors[4].g, fiveColors[4].b
+        //        ]);
+        //        var data64 = base64js.fromByteArray(dataBuffer);
+        //        //io.sockets.emit('setFives', data64);
+
+
         var colors = [
             [fiveColors[0].r, fiveColors[0].g, fiveColors[0].b],
             [fiveColors[1].r, fiveColors[1].g, fiveColors[1].b],
