@@ -68,7 +68,7 @@ function CapSenseTouchListener(socket) {
         }
         if (row != -1 && col != -1) {
             var div_id = 'stationui_' + row + '-' + col;
-            var cap = parseInt(data['sensor_id']);
+            var cap = parseInt(data['sensorId']);
             console.log('cap event', row, col, cap);
             if (cap >= 0 && cap <= 4) {
                 var layer_id = 'L' + cap;

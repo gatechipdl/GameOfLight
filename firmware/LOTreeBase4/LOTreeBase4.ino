@@ -8,12 +8,15 @@
 //Using Arduino ESP8266 Library version 2.5
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "4002";
+const char* baseVersion = "4009";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+
+#define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
+//https://github.com/BareConductive/mpr121/blob/public/MPR121/MPR121.h
 #include <MPR121.h>
 #include <Wire.h>
 #include <ESP8266HTTPClient.h>
@@ -53,6 +56,7 @@ uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
 #define CAPSENSE_COUNT 12
 #define CAPSENSE_TOP 11
+
 // this is the touch threshold - setting it low makes it more like a proximity trigger
 // default value is 40 for touch
 const int touchThreshold = 40;
@@ -142,7 +146,7 @@ void StrandTest1() {
   fill_rainbow(leds, LED_COUNT, gHue, 7);
   FastLED.show();
   FastLED.delay(1000 / 120);
-  EVERY_N_MILLISECONDS(20) {
+  EVERY_N_MILLISECONDS(30) {
     gHue++;
   }
 }
@@ -155,7 +159,7 @@ void StrandTest2() {
   leds[pos] += CHSV( gHue, 255, 192);
   FastLED.show();
   FastLED.delay(1000 / 120);
-  EVERY_N_MILLISECONDS(20) {
+  EVERY_N_MILLISECONDS(30) {
     gHue++;
   }
 }
@@ -171,7 +175,7 @@ void StrandTest3() {
   }
   FastLED.show();
   FastLED.delay(1000 / 120);
-  EVERY_N_MILLISECONDS(20) {
+  EVERY_N_MILLISECONDS(30) {
     gHue++;
   }
 }
@@ -651,6 +655,7 @@ void setup() {
   //Wire.setClock(100000L);
   delay(100);
 
+  byte capTry = 3;
   // 0x5C is the MPR121 I2C address on the Bare Touch Board
   while (!MPR121.begin(0x5A)) {
     Serial.println("error setting up MPR121");
@@ -677,7 +682,11 @@ void setup() {
         Serial.println("unknown error");
         break;
     }
-    delay(1000);
+    capTry--;
+    if(capTry<=0){
+      break;
+    }
+    delay(100);
   }
 
   MPR121.setTouchThreshold(touchThreshold);
@@ -704,7 +713,6 @@ void setup() {
 void loop() {
   webSocket.loop();
   Operate();
-  udpEvent(); //check for udp events  
   udpEvent(); //check for udp events  
   
   //check for firmware updates once every ten minutes
