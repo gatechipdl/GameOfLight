@@ -764,10 +764,11 @@ function clearColorsListener(socket) {
 function sendUDPSocket(msg, stationId) {
     //console.log('sending UDP Socket');
     let ip = getIPAddressFromStationID(stationId);
-    // console.log(stationId+":"+ip);
+    //console.log(stationId+":"+ip);
+    //console.log(msg);
     if (isNaN(ip)) {
         udpSocket.send(msg, 0, msg.length, _udpPortSend, ip);
-        //console.log([stationId, ip, udpPortSend, msg.length])
+        //console.log([stationId, ip, _udpPortSend, msg.length])
     }
 }
 
@@ -792,7 +793,7 @@ function setFivesUDP(data) {
         data['colors'][4][0],
         data['colors'][4][1],
         data['colors'][4][2]
-        ]);
+    ]);
     sendUDPSocket(msg, data['stationId']);
 }
 

@@ -39,9 +39,9 @@ socket.on('connect', function () {
 function setStationColor(row, col) {
     if (LO_config.layers == 5) {
         var tData = {};
-        var station_id = address_map[row][col];
+        var stationId = address_map[row][col];
         //tData['log'] = true;
-        tData['station_id'] = station_id;
+        tData['stationId'] = stationId;
         tData['colors'] = [
             [layer_color[row][col][0].r, layer_color[row][col][0].g, layer_color[row][col][0].b],
             [layer_color[row][col][1].r, layer_color[row][col][1].g, layer_color[row][col][1].b],
@@ -59,7 +59,7 @@ function CapSenseTouchListener(socket) {
             col = -1;
         for (i in address_map) {
             for (j in address_map[i]) {
-                if (parseInt(data['station_id']) == parseInt(address_map[i][j])) {
+                if (parseInt(data['stationId']) == parseInt(address_map[i][j])) {
                     row = parseInt(i);
                     col = parseInt(j);
                     break;
