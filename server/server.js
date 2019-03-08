@@ -203,7 +203,7 @@ function stationDataListener(socket) {
         console.log(data);
         //parse and add to managed list
         var aData = data.split(",");
-        //                  ("\"" + station_id_str + ","
+        //                  ("\"" + stationId_str + ","
         //                  + String(WiFi.hostname()) + ","
         //                  + String(WiFi.localIP()) + ","
         //                  + String(mac[0], HEX) + ","
@@ -236,38 +236,39 @@ function stationDataListener(socket) {
 
 
 
-function getIPAddressFromStationID(station_id) {
+function getIPAddressFromStationID(stationId) {
     var ip = 0;
     Object.keys(_stationData).forEach(function (key) {
-        if (_stationData[key]['id'] == station_id) {
+        if (_stationData[key]['id'] == stationId) {
             ip = _stationData[key]['ip'];
         }
-    });;
-    return int2ipReverse(ip);
+    });
+    //return int2ipReverse(ip);
+    return ip;
 }
 
 
 
 //changes the id value of a number
 function setstationIdListener(socket) {
-    socket.on('setstation_id', function (data) {
-        if (!isNaN(data['station_id'])) {
-            if (Number.parseInt(data['station_id'])) {
-                console.log('setting mac ' + data['mac'] + ' to station ' + data['station_id'] + " through socket: " + [_stationData[data['mac']]['socket']]);
-                var dataBuff16 = new Uint16Array([data['station_id']]);
+    socket.on('setStationId', function (data) {
+        if (!isNaN(data['stationId'])) {
+            if (Number.parseInt(data['stationId'])) {
+                console.log('setting mac ' + data['mac'] + ' to station ' + data['stationId'] + " through socket: " + [_stationData[data['mac']]['socket']]);
+                var dataBuff16 = new Uint16Array([data['stationId']]);
                 console.log('dataBuff16 ', dataBuff16);
                 var dataBuff8 = new Uint8Array(dataBuff16.buffer);
                 console.log('dataBuff8 ', dataBuff8);
-                socket.broadcast.to([_stationData[data['mac']]['socket']]).emit('setstation_id', base64js.fromByteArray(dataBuff8));
+                socket.broadcast.to([_stationData[data['mac']]['socket']]).emit('setStationId', base64js.fromByteArray(dataBuff8));
                 //update station data
 
                 updateStationData({
                     [data['mac']]: {
-                        'id': data['station_id']
+                        'id': data['stationId']
                     }
                 });
             } else {
-                console.log('station_id not an integer: ' + data);
+                console.log('stationId not an integer: ' + data);
             }
         } else {
             console.log('data issue: ' + data);
@@ -354,7 +355,7 @@ function recoverStationDataListener(socket) {
                     console.log('dataBuff16 ', dataBuff16);
                     var dataBuff8 = new Uint8Array(dataBuff16.buffer);
                     console.log('dataBuff8 ', dataBuff8);
-                    socket.broadcast.to([_stationData[key]['socket']]).emit('setstation_id', base64js.fromByteArray(dataBuff8));
+                    socket.broadcast.to([_stationData[key]['socket']]).emit('setStationId', base64js.fromByteArray(dataBuff8));
                     //update station data
                 } else {
                     console.log('id not an integer: ' + data);
@@ -421,8 +422,8 @@ function capSenseListener(socket) {
         console.log('capsense: ' + data);
         var cData = data.split(","); //station, cap, state
         var nData = {
-            'station_id': cData[0],
-            'sensor_id': cData[1],
+            'stationId': cData[0],
+            'sensorId': cData[1],
             'value': cData[2]
         }
         io.sockets.to('browsers').emit('CapSenseEvent', nData);
@@ -430,29 +431,29 @@ function capSenseListener(socket) {
 
         var t_entry;
         capsenseData.forEach(function (entry) {
-            if (entry.station_id == nData.station_id) {
+            if (entry.stationId == nData.stationId) {
                 t_entry = entry;
             }
         });
 
         if (!t_entry) {
             var newEntry = {
-                'station_id': nData.station_id,
+                'stationId': nData.stationId,
                 'values': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             };
-            newEntry.values[nData.sensor_id] = nData.value;
+            newEntry.values[nData.sensorId] = nData.value;
             capsenseData.push(newEntry);
         } else {
             var bData = {
-                'station_id': t_entry.station_id, //1-25
-                'sensor_id': nData.sensor_id //0-4: One side, 5-9: One side, 11: Top
+                'stationId': t_entry.stationId, //1-25
+                'sensorId': nData.sensorId //0-4: One side, 5-9: One side, 11: Top
             };
-            if (nData.value > t_entry.values[nData.sensor_id]) {
+            if (nData.value > t_entry.values[nData.sensorId]) {
                 io.sockets.to('browsers').emit('CapSenseTouch', bData);
             } else {
                 io.sockets.to('browsers').emit('CapSenseUnTouch', bData);
             }
-            t_entry.values[nData.sensor_id] = nData.value;
+            t_entry.values[nData.sensorId] = nData.value;
         }
     });
 }
@@ -524,9 +525,9 @@ function setFiveHueColorsListener(socket) {
             [fiveColors[4].r, fiveColors[4].g, fiveColors[4].b]
                 ];
 
-        for (var i = 1; i < 26; i++) {
+        for (let i = 1; i < 26; i++) {
             setFivesUDP({
-                'station_id': i,
+                'stationId': i,
                 'colors': colors
             });
         }
@@ -542,7 +543,7 @@ function setTreeColorListener(socket) {
         console.dir(data);
         /*
         {
-        station_id:'asdf',
+        stationId:'asdf',
         color:[255,255,255]
         }
         */
@@ -557,7 +558,7 @@ function setTreeColorListener(socket) {
         ]);
 
         var data64 = base64js.fromByteArray(dataBuffer);
-        socket.broadcast.to(data['station_id']).emit('setFives', data64);
+        socket.broadcast.to(data['stationId']).emit('setFives', data64);
     });
 }
 
@@ -570,7 +571,7 @@ function setFiveColorsListener(socket) {
         //socket.broadcast.emit('SetFiveColors', data); //for logging purposes
         /*
         {
-        station_id:'asdf',
+        stationId:'asdf',
         colors:[
         [255,255,255],
         [255,255,255],
@@ -591,7 +592,7 @@ function setFiveColorsListener(socket) {
         //        ]);
         //
         //        var data64 = base64js.fromByteArray(dataBuffer);
-        //        socket.broadcast.to(data['station_id']).emit('setFives',data64);
+        //        socket.broadcast.to(data['stationId']).emit('setFives',data64);
 
         setFivesUDP(data); //route through to UDP
     });
@@ -606,7 +607,7 @@ function setMultipleFiveColorsListener(socket) {
         }
         /*
         {'stations':[
-            {station_id:'asdf',
+            {stationId:'asdf',
             colors:[
             [255,255,255],
             [255,255,255],
@@ -636,13 +637,13 @@ function setColumnarColorsListener(socket) {
         //console.dir(data);
         /*
         {
-        station_id:'asdf',
+        stationId:'asdf',
         color:[
         [255,255,255]
         }
         */
         var theColor = data['color'];
-        fillSolid(data['station_id'], 0, 45, new CRGB(theColor[0], theColor[1], theColor[2]));
+        fillSolid(data['stationId'], 0, 45, new CRGB(theColor[0], theColor[1], theColor[2]));
     });
 }
 
@@ -760,19 +761,20 @@ function clearColorsListener(socket) {
 
 
 
-function sendUDPSocket(msg, station_id) {
+function sendUDPSocket(msg, stationId) {
     //console.log('sending UDP Socket');
-    let ip = getIPAddressFromStationID(station_id);
-    if (ip) {
-        udpSocket.send(msg, 0, msg.length, udpPortSend, ip);
-        //console.log([station_id, ip, udpPortSend, msg.length])
+    let ip = getIPAddressFromStationID(stationId);
+    // console.log(stationId+":"+ip);
+    if (isNaN(ip)) {
+        udpSocket.send(msg, 0, msg.length, _udpPortSend, ip);
+        //console.log([stationId, ip, udpPortSend, msg.length])
     }
 }
 
 const UDP_COMMAND_SETFIVES = 5;
 
 function setFivesUDP(data) {
-    //{'station_id":<#>, 'colors':[ [255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0] ]}
+    //{'stationId":<#>, 'colors':[ [255(R),255(G),255(B)](bottom),[0,0,0],[0,0,0],[0,0,0],[0,0,0] ]}
     let msg = new Buffer.from([
         UDP_COMMAND_SETFIVES, //COMMAND byte
         data['colors'][0][0],
@@ -791,7 +793,7 @@ function setFivesUDP(data) {
         data['colors'][4][1],
         data['colors'][4][2]
         ]);
-    sendUDPSocket(msg, data['station_id']);
+    sendUDPSocket(msg, data['stationId']);
 }
 
 
@@ -928,8 +930,8 @@ function CRGB(red, green, blue) {
 /*
  * Turn off LEDs on a specific station
  */
-function clear(station_id) {
-    io.sockets.to(station_id).emit('clear', '');
+function clear(stationId) {
+    io.sockets.to(stationId).emit('clear', '');
 }
 
 
@@ -946,17 +948,17 @@ function clearAll() {
 /*
  * mimics FastLED FillSolid method
  */
-function fillSolid(station_id, startIndex, numToFill, ledColor) {
-    if (!isNaN(station_id)) {
+function fillSolid(stationId, startIndex, numToFill, ledColor) {
+    if (!isNaN(stationId)) {
         //update server's copy of the LED cluster state
         for (var i = startIndex; i < startIndex + numToFill; i++) {
-            _colors[station_id][i].r = ledColor.r;
-            _colors[station_id][i].g = ledColor.g;
-            _colors[station_id][i].b = ledColor.b;
+            _colors[stationId][i].r = ledColor.r;
+            _colors[stationId][i].g = ledColor.g;
+            _colors[stationId][i].b = ledColor.b;
         }
     }
     let dataBuffer = new Uint8Array([startIndex, numToFill, ledColor.r, ledColor.g, ledColor.b]);
-    io.sockets.to(station_id).emit('fillSolid', base64js.fromByteArray(dataBuffer));
+    io.sockets.to(stationId).emit('fillSolid', base64js.fromByteArray(dataBuffer));
 }
 
 
@@ -964,15 +966,15 @@ function fillSolid(station_id, startIndex, numToFill, ledColor) {
 /*
  * Set a single LED color on a specific station
  */
-function setOneColor(station_id, startIndex, ledColor) {
-    if (!isNaN(station_id)) {
+function setOneColor(stationId, startIndex, ledColor) {
+    if (!isNaN(stationId)) {
         //update server's copy of the LED custer state
-        _colors[station_id][startIndex].r = ledColor.r;
-        _colors[station_id][startIndex].g = ledColor.g;
-        _colors[station_id][startIndex].b = ledColor.b;
+        _colors[stationId][startIndex].r = ledColor.r;
+        _colors[stationId][startIndex].g = ledColor.g;
+        _colors[stationId][startIndex].b = ledColor.b;
     }
     let dataBuffer = new Uint8Array([startIndex, ledColor.r, ledColor.g, ledColor.b]);
-    io.sockets.to(station_id).emit('setColor', dataBuffer);
+    io.sockets.to(stationId).emit('setColor', dataBuffer);
 }
 
 
@@ -983,14 +985,14 @@ function setOneColor(station_id, startIndex, ledColor) {
  * the number of leds is computed by the lenth of the colorArray
  * colorArray is an array of CRGB
  */
-function setMultipleColors(station_id, startIndex, colorArray) {
+function setMultipleColors(stationId, startIndex, colorArray) {
     //update server's copy of the LED custer state
-    _colors[station_id][ledIndex].r = ledColor.r;
-    _colors[station_id][ledIndex].g = ledColor.g;
-    _colors[station_id][ledIndex].b = ledColor.b;
+    _colors[stationId][ledIndex].r = ledColor.r;
+    _colors[stationId][ledIndex].g = ledColor.g;
+    _colors[stationId][ledIndex].b = ledColor.b;
 
     var dataBuffer = new Uint8Array([ledIndex, numToFill, ledColor.r, ledColor.g, ledColor.b]);
-    io.sockets.to(station_id).emit('setColors', dataBuffer);
+    io.sockets.to(stationId).emit('setColors', dataBuffer);
 }
 
 
@@ -998,15 +1000,15 @@ function setMultipleColors(station_id, startIndex, colorArray) {
 /*
  * GOL Station 5 segment code
  */
-function setFiveColors(station_id, fiveColorArray) {
-    if (!isNaN(station_id)) {
+function setFiveColors(stationId, fiveColorArray) {
+    if (!isNaN(stationId)) {
         //update server's copy of the LED custer state
-        if (station_id < MAX_STATION_COUNT) {
+        if (stationId < MAX_STATION_COUNT) {
             for (var i = 0; i < 5; i++) {
                 for (var j = 0; j < LED_CLUSTER_COUNT / 5; j++) {
-                    _colors[station_id][i * 9 + j].r = fiveColorArray[i].r;
-                    _colors[station_id][i * 9 + j].g = fiveColorArray[i].g;
-                    _colors[station_id][i * 9 + j].b = fiveColorArray[i].b;
+                    _colors[stationId][i * 9 + j].r = fiveColorArray[i].r;
+                    _colors[stationId][i * 9 + j].g = fiveColorArray[i].g;
+                    _colors[stationId][i * 9 + j].b = fiveColorArray[i].b;
                 }
             }
         }
@@ -1043,7 +1045,7 @@ function setFiveColors(station_id, fiveColorArray) {
         fiveColorArray[4].r, fiveColorArray[4].g, fiveColorArray[4].b
     ]);
 
-    io.sockets.to(station_id).emit('setFives', base64js.fromByteArray(dataBuffer2));
+    io.sockets.to(stationId).emit('setFives', base64js.fromByteArray(dataBuffer2));
     //console.log(base64js.fromByteArray(dataBuffer2));
 }
 
@@ -1066,7 +1068,7 @@ function syncColorsFromServer() {
  * typically used for loading last saved state
  * or used for more efficient devliery of complete color changes
  */
-function setStrip(station_id, colorArray) {
+function setStrip(stationId, colorArray) {
 
 }
 
@@ -1075,8 +1077,8 @@ function setStrip(station_id, colorArray) {
 /*
  * Force clients to check for firmware updates
  */
-function checkForUpdate(station_id) {
-    io.sockets.to(station_id).emit('checkForUpdate', "");
+function checkForUpdate(stationId) {
+    io.sockets.to(stationId).emit('checkForUpdate', "");
 }
 setInterval(checkForUpdate, 600000);
 
