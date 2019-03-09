@@ -153,6 +153,7 @@ function createRomFunctionButton(obj) {
 
 //DOM FUNCTION
 //creates DOM objects for LO set up based on LO_config parameters
+var mouseInLayer = {row:-1, col:-1, layer:-1, side:'none'};
 function createVisUI() {
     for (var i = 0; i < LO_config.rows; i++) {
         for (var j = 0; j < LO_config.cols; j++) {
@@ -165,6 +166,14 @@ function createVisUI() {
                 var rowcol = info[1].split('-');
                 station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['top'].logState('click', false);
             });
+            $('#' + div_id + ' .top').on('mouseleave', function () {
+                mouseInLayer =  {row:-1, col:-1, layer:-1, side:'none'};
+            });
+            $('#' + div_id + ' .top').on('mouseenter', function () {
+                var info = $(this).parent().attr('id').split('_');
+                var rowcol = info[1].split('-');
+                mouseInLayer =  {row:parseInt(rowcol[0]), col:parseInt(rowcol[1]), layer:-1, side:'top'};
+            });
             for (var k = LO_config.layers - 1; k >= 0; k--) {
                 $('#' + div_id).append('<div class="layer_' + k + ' layer"></div>')
                 $('#' + div_id + ' .layer_' + k).append('<div class="left">L' + k + '</div>');
@@ -176,12 +185,32 @@ function createVisUI() {
                     var layer_number = layer_info.split(' ')[0].split('_')[1];
                     station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['L' + layer_number].logState('click', false);
                 });
+                $('#' + div_id + ' .layer_' + k + ' .left').on('mouseleave', function () {
+                    mouseInLayer =  {row:-1, col:-1, layer:-1, side:'none'};
+                });
+                $('#' + div_id + ' .layer_' + k + ' .left').on('mouseenter', function () {
+                    var info = $(this).parent().parent().attr('id').split('_');
+                    var rowcol = info[1].split('-');
+                    var layer_info = $(this).parent().attr('class');
+                    var layer_number = layer_info.split(' ')[0].split('_')[1];
+                    mouseInLayer =  {row:parseInt(rowcol[0]), col:parseInt(rowcol[1]), layer:parseInt(layer_number), side:'L'};
+                });
                 $('#' + div_id + ' .layer_' + k + ' .right').on('click', function () {
                     var info = $(this).parent().parent().attr('id').split('_');
                     var rowcol = info[1].split('-');
                     var layer_info = $(this).parent().attr('class');
                     var layer_number = layer_info.split(' ')[0].split('_')[1];
                     station_triggers[parseInt(rowcol[0])][parseInt(rowcol[1])]['R' + layer_number].logState('click', false);
+                });
+                $('#' + div_id + ' .layer_' + k + ' .right').on('mouseleave', function () {
+                    mouseInLayer =  {row:-1, col:-1, layer:-1, side:'none'};
+                });
+                $('#' + div_id + ' .layer_' + k + ' .right').on('mouseenter', function () {
+                    var info = $(this).parent().parent().attr('id').split('_');
+                    var rowcol = info[1].split('-');
+                    var layer_info = $(this).parent().attr('class');
+                    var layer_number = layer_info.split(' ')[0].split('_')[1];
+                    mouseInLayer =  {row:parseInt(rowcol[0]), col:parseInt(rowcol[1]), layer:parseInt(layer_number), side:'R'};
                 });
             }
         }
