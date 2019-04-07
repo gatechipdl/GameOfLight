@@ -1,5 +1,5 @@
 var water_cap_delta = 40;
-var water_animation_interval = 50;
+var water_animation_interval = 100;
 
 rom_list.push(
 	{
@@ -101,5 +101,10 @@ function waterAnimation() {
 		}
     }
 
+    // for (var i=0; i<LO_config.cols; i++) {
+	// 	for (var j=0; j<LO_config.rows; j++) {
+    //         station_update[i][j] = true;
+    //     }
+    // }
 	updateAllStationsColor();
 }

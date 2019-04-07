@@ -8,7 +8,7 @@
 //Using Arduino ESP8266 Library version 2.5
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* baseVersion = "4009";
+const char* baseVersion = "4026";
 
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -23,6 +23,10 @@ const char* baseVersion = "4009";
 #include <ESP8266httpUpdate.h>
 #include <SocketIoClient.h>
 #include "base64.h"
+#include <ArtnetWifi.h>
+extern "C" {
+  #include "user_interface.h"
+}
 
 
 FASTLED_USING_NAMESPACE
@@ -40,16 +44,16 @@ FASTLED_USING_NAMESPACE
 #define PIN_SDA 14
 #define PIN_SCL 5
 
-int stationId = 0; //need to pull from EEPROM asap
+uint16_t stationId = 0; //need to pull from EEPROM asap
 
 CRGB leds[LED_COUNT];
 float segmentHues[LED_SEGMENT_COUNT];
 float segmentSats[LED_SEGMENT_COUNT];
 float hueStep = 0.002;
-float satStepMag = 0.003;
+float satStepMag = 0.008;//0.003;
 float satSteps[LED_SEGMENT_COUNT];
-float briStep1 = 0.03;
-float briStep2 = 0.007;
+float briStep1 = 0.03;//brightness off off speed
+float briStep2 = 0.007;//recovery
 float segmentBris[LED_SEGMENT_COUNT];
 
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
@@ -76,30 +80,57 @@ SocketIoClient webSocket;
 
 
 WiFiUDP _udp;
+boolean _udpIsRunning=false;
 unsigned int _localUdpPort = 30000; //+stationId?
 #define UDP_MAX_INPUT_BYTE_COUNT  32
 char _udpIncomingPacket[UDP_MAX_INPUT_BYTE_COUNT];
 #define UDP_COMMAND_SETFIVES  5
 
 
+// Art-Net settings
+ArtnetWifi artnet;
+int startUniverse = 0; // CHANGE FOR YOUR SETUP most software this is 1, some software send out artnet first universe as 0.
 
+// Check if we got all universes
+const int numberOfChannels = LED_COUNT * 3; // Total number of channels you want to receive (1 led = 3 channels)
+const int maxUniverses = numberOfChannels / 512 + ((numberOfChannels % 512) ? 1 : 0);
+bool universesReceived[maxUniverses];
+bool sendFrame = 1;
+int previousDataLength = 0;
+
+void initWiFi();
+void startWiFi();
+
+void initWebSocket();
+void startWebSocket();
+
+void initUDP();
+void startUDP();
+//void flushUDP();
+void stopUDP();
+
+void initArtNet();
+void startArtNet();
+//void flushArtNet();
+void stopArtNet();
 
 void chunkedDelay(int ms, int chunkSize);
 //void redraw();
 void checkForUpdate();
 void EEPROMWriteInt(int p_address, int p_value);
-unsigned int EEPROMReadInt(int p_address);
+uint16_t EEPROMReadInt(int p_address);
 void udpEvent();
 void readCapSenseInputs();
 void capSenseLEDUpdate();
 void PostSetupInitialization();
-void SlaveListen();
+void SlaveListenUDP();
 void StrandTest1();
 void StrandTest2();
 void StrandTest3();
-void CapSenseTest();
+void CapSenseStandAlone();
 void CapSenseControl();
 void CapSenseControlTop();
+void ArtNetControlled();
 void connectSocketEventHandler(const char * payload, size_t payloadLength);
 void clearSocketEventHandler(const char * payload, size_t payloadLength);
 void fillSolidSocketEventHandler(const char * payload, size_t payloadLength);
@@ -114,31 +145,45 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength);
 // Operation Variables
 uint8_t operationMode = 4;
 typedef void (*OperationFunction) ();
-OperationFunction operations[7] = {
-  SlaveListen,            // 0 - listening
+#define OPERATION_COUNT 8
+OperationFunction operations[OPERATION_COUNT] = {
+  SlaveListenUDP,            // 0 - listening
   StrandTest1,            // 1 - rainbow
   StrandTest2,            // 2 - another strandtest
   StrandTest3,            // 3 - another strandtest
-  CapSenseTest,           // 4 - cap sense test
+  CapSenseStandAlone,           // 4 - cap sense test
   CapSenseControl,         // 5 - cap sense controller
-  CapSenseControlTop      // 6 - cap sense controller top
+  CapSenseControlTop,      // 6 - cap sense controller top
+  ArtNetControlled      // 7 - artnet control reading
 };
 OperationFunction Operate = operations[operationMode]; //default startup operation mode
 
 void capSenseLEDUpdate() {
   for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
     //uint32_t STATION_COLOR = HSV_to_RGB(i);
-    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
-      leds[i*LED_PER_SEGMENT_COUNT+j].setHSV(int(segmentHues[i]*255), int(segmentSats[i]*255), int(segmentBris[i]*255));
-    }
+    uint8_t h = (uint8_t)(segmentHues[i]*255);
+    float sat = segmentSats[i];
+    sat = 2.0*(sat-0.5); //shift from 0.0:1.0 to -1.0:+1.0
+    sat = sin(sat*PI/2);//take sin
+    bool wasNeg = sat<0;
+    sat = (-1*wasNeg)*sqrt(abs(sat));//take square root to make it even flatter
+    sat = (sat/2.0)+0.5; //shift back to 0.0:1.0
+    
+    uint8_t s = (uint8_t)(sat*255);
+    uint8_t v = (uint8_t)(segmentBris[i]*255);
+    fill_solid(leds + i*LED_PER_SEGMENT_COUNT, LED_PER_SEGMENT_COUNT, CHSV(h,s,v) );
+//    for (int j = 0; j < LED_PER_SEGMENT_COUNT; j++) {
+//      leds[i*LED_PER_SEGMENT_COUNT+j].setHSV(int(segmentHues[i]*255), int(segmentSats[i]*255), int(segmentBris[i]*255));
+//    }
   }
   FastLED.show();
 }
 
 void PostSetupInitialization(){};
 
-void SlaveListen() {
+void SlaveListenUDP() {
   // 0 - listening
+  udpEvent(); //check for udp events
 }
 
 void StrandTest1() {
@@ -181,7 +226,7 @@ void StrandTest3() {
 }
 
 
-void CapSenseTest() {
+void CapSenseStandAlone() {
   
   readCapSenseInputs();
   
@@ -235,8 +280,12 @@ void CapSenseTest() {
 }
 
 
+/*
+ * with UDP led controls
+ * with Socket.Io CapSense controls
+ */
 void CapSenseControl() {
-  
+  udpEvent(); //check for udp events
   EVERY_N_MILLISECONDS(50) {
     readCapSenseInputs();
 
@@ -258,9 +307,12 @@ void CapSenseControl() {
   }
 }
 
-
+/*
+ * with UDP led controls
+ * with Socket.Io CapSense controls
+ */
 void CapSenseControlTop() {
-
+  udpEvent(); //check for udp events
   EVERY_N_MILLISECONDS(50) {
     readCapSenseInputs();
     
@@ -282,6 +334,15 @@ void CapSenseControlTop() {
 //    webSocket.emit("message",("\""+String(stationId, DEC)+","+String(cap_last[CAPSENSE_TOP],DEC)+","+String(cap_curr[CAPSENSE_TOP],DEC)+"\"").c_str());
 //      }
   }
+}
+
+/*
+ * with led control through ArtNet (UDP specific port)
+ * with no CapSense controls yet
+ */
+void ArtNetControlled(){
+  // we call the read function inside the loop
+  artnet.read();
 }
 
 
@@ -334,6 +395,18 @@ void chunkedDelay(int ms = 1000, int chunkSize = 10) {
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -344,11 +417,32 @@ void chunkedDelay(int ms = 1000, int chunkSize = 10) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void connectSocketEventHandler(const char * payload, size_t payloadLength) {
-  Serial.printf("connected to server\n");
+void initWebSocket(){
+  webSocket.on("connect", connectSocketEventHandler);
+  webSocket.on("getInfo", getInfoSocketEventHandler);
+//  webSocket.on("clear", clearSocketEventHandler); //remove to reduce socket.io load
+//  webSocket.on("fillSolid", fillSolidSocketEventHandler); //remove to reduce socket.io load
+//  webSocket.on("setColor", setColorSocketEventHandler); //remove to reduce socket.io load
+//  webSocket.on("setColors", setColorsSocketEventHandler); //remove to reduce socket.io load
+  webSocket.on("setFives", setFivesSocketEventHandler);
+  webSocket.on("checkForUpdate", checkForUpdateSocketEventHandler);
+  webSocket.on("setMode", setModeSocketEventHandler);
+  webSocket.on("setStationId", setStationIdSocketEventHandler);
+}
+
+void startWebSocket(){
+  webSocket.begin(server_ip);
+}
+  
+void subscribeStation(){
   String stationId_str = String(stationId, DEC);
   const char* stationId_char = stationId_str.c_str();
   webSocket.emit("subscribeStation", stationId_char);
+}
+
+void connectSocketEventHandler(const char * payload, size_t payloadLength) {
+  Serial.printf("connected to server\n");
+  subscribeStation();
 }
 
 void getInfoSocketEventHandler(const char * payload, size_t payloadLength) {
@@ -468,7 +562,34 @@ void setModeSocketEventHandler(const char * payload, size_t payloadLength) {
   unsigned char binPayload[output_length];
   decode_base64((unsigned char*)payload, binPayload);
 
-  operationMode = (uint8_t)binPayload[0];
+
+OperationFunction operations[OPERATION_COUNT] = {
+  SlaveListenUDP,            // 0 - listening
+  StrandTest1,            // 1 - rainbow
+  StrandTest2,            // 2 - another strandtest
+  StrandTest3,            // 3 - another strandtest
+  CapSenseStandAlone,           // 4 - cap sense test
+  CapSenseControl,         // 5 - cap sense controller
+  CapSenseControlTop,      // 6 - cap sense controller top
+  ArtNetControlled      // 7 - artnet control reading
+};
+
+  uint8_t newOperationMode = (uint8_t)binPayload[0];
+  if(operationMode==0 || operationMode==5 || operationMode==6){
+    stopUDP();
+  }
+  if(operationMode==7){
+    stopArtNet();
+  }
+
+  operationMode = newOperationMode;
+  if(operationMode==0 || operationMode==5 || operationMode==6){
+    startUDP();
+  }
+  if(operationMode==7){
+    startArtNet();
+  }
+  
   Operate = operations[operationMode];
 }
 
@@ -480,7 +601,7 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) 
   unsigned char binPayload[output_length];
   decode_base64((unsigned char*)payload, binPayload);
 
-  stationId = ((binPayload[0]<<0) & 0xFF) + ((binPayload[1]<<8) & 0xFF00);
+  stationId = binPayload[0] + binPayload[1]*256;
   EEPROM.begin(512);
   EEPROMWriteInt(0, stationId);
   
@@ -490,15 +611,53 @@ void setStationIdSocketEventHandler(const char * payload, size_t payloadLength) 
 
 
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*
-   UDP
+   WiFi Methods
 */
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void initWiFi(){
+  WiFi.mode(WIFI_OFF);
+  WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
+  delay(100);
+  WiFi.mode(WIFI_STA);
+  wifi_set_sleep_type(NONE_SLEEP_T); //70mA power; without this should be 18mA average as it wakes up every <100ms to check for data
+  WiFi.setAutoConnect(true);
+  WiFi.setAutoReconnect(true);  
+}
+
+void startWiFi(){
+ WiFi.begin(wifi_ssid, wifi_pass);
+}
+  
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   UDP Methods
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void initUDP(){} //does nothing
+
+void startUDP(){
+  _udp.begin(_localUdpPort); //begin listening to UDP port for incoming data
+  _udpIsRunning = true;
+}
+
+void stopUDP(){
+  _udp.stop();
+  _udpIsRunning = false;
+}
 
 void udpEvent(){
   int packetSize = _udp.parsePacket();
@@ -531,6 +690,19 @@ void udpEvent(){
     //Serial.printf("UDP packet contents: %s\n", incomingPacket);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -579,8 +751,8 @@ void readCapSenseInputs() {
 //This function will write a 2 byte integer to the eeprom at the specified address and address + 1
 void EEPROMWriteInt(int p_address, int p_value)
 {
-  byte lowByte = ((p_value >> 0) & 0xFF);
-  byte highByte = ((p_value >> 8) & 0xFF);
+  uint8_t lowByte = ((p_value >> 0) & 0xFF);
+  uint8_t highByte = ((p_value >> 8) & 0xFF);
 
   chunkedDelay(100);
   EEPROM.write(p_address, lowByte);
@@ -590,15 +762,119 @@ void EEPROMWriteInt(int p_address, int p_value)
 }
 
 //This function will read a 2 byte integer from the eeprom at the specified address and address + 1
-unsigned int EEPROMReadInt(int p_address)
+uint16_t EEPROMReadInt(int p_address)
 {
   chunkedDelay(100);
-  byte lowByte = EEPROM.read(p_address);
+  uint8_t lowByte = EEPROM.read(p_address);
   chunkedDelay(100);
-  byte highByte = EEPROM.read(p_address + 1);
+  uint8_t highByte = EEPROM.read(p_address + 1);
   chunkedDelay(100);
 
-  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+  //return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+  return uint16_t(lowByte) + uint16_t(highByte)*256;
+}
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   ArtNet Methods
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void initArtNet(){
+  artnet.setArtDmxCallback(onDmxFrame);
+}
+
+void startArtNet(){
+  startUniverse = 0;
+  artnet.begin(); //udp on port 0x1936 (6454 decimal)
+}
+void stopArtNet(){
+  artnet.stop();
+}
+
+void onDmxFrameFlush(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data){}
+
+void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data)
+{ 
+  sendFrame = 1;
+  // set brightness of the whole strip
+  if (universe == 15)
+  {
+    FastLED.setBrightness(data[0]);
+    FastLED.show();
+  }
+
+  // Store which universe has got in
+  if ((universe - startUniverse) < maxUniverses) {
+    universesReceived[universe - startUniverse] = 1;
+  }
+
+  for (int i = 0 ; i < maxUniverses ; i++)
+  {
+    if (universesReceived[i] == 0)
+    {
+      //Serial.println("Broke");
+      sendFrame = 0;
+      break;
+    }
+  }
+  
+
+//  // read universe and put into the right part of the display buffer
+//  for (int i = 0; i < length / 3; i++)
+//  {
+//    int led = i + (universe - startUniverse) * (previousDataLength / 3);
+//    if (led < LED_COUNT)
+//      leds[led] = CRGB(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+//  }
+
+  if(stationId<35){
+    for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+      //0,2,1
+      uint8_t r = data[(stationId-1)*15+i*3+0];
+      uint8_t g = data[(stationId-1)*15+i*3+2];
+      uint8_t b = data[(stationId-1)*15+i*3+1];
+      fill_solid(leds + i*LED_PER_SEGMENT_COUNT, LED_PER_SEGMENT_COUNT, CRGB(r,g,b) );
+    }
+    //FastLED.show();  
+  } 
+
+  
+  previousDataLength = length;
+
+  if (sendFrame)
+  {
+    FastLED.show();
+    // Reset universeReceived to 0
+    memset(universesReceived, 0, maxUniverses);
+  }
+}
+
+void onDmxFrameFives(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data)
+{
+  if(stationId<35){
+    for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
+      //0,2,1
+      uint8_t r = data[(stationId-1)*15+i*3+0];
+      uint8_t g = data[(stationId-1)*15+i*3+2];
+      uint8_t b = data[(stationId-1)*15+i*3+1];
+      fill_solid(leds + i*LED_PER_SEGMENT_COUNT, LED_PER_SEGMENT_COUNT, CRGB(r,g,b) );
+    }
+    FastLED.show();  
+  }  
 }
 
 
@@ -612,7 +888,15 @@ unsigned int EEPROMReadInt(int p_address)
 
 
 
-
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+   Initial Setup
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -626,27 +910,14 @@ void setup() {
   Serial.println(stationId);
   EEPROM.end();
 
-  WiFi.mode(WIFI_OFF);
-  WiFi.disconnect(); //in version 2.3.0 of ESP8266 library, can't WiFi.begin if already connected or more than 1 second of delay
-  delay(100);
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoConnect(true);
-  WiFi.setAutoReconnect(true);
-  WiFi.begin(wifi_ssid, wifi_pass);
+  initWiFi();
+  startWiFi();
   
-  webSocket.on("connect", connectSocketEventHandler);
-  webSocket.on("getInfo", getInfoSocketEventHandler);
-  webSocket.on("clear", clearSocketEventHandler);
-  webSocket.on("fillSolid", fillSolidSocketEventHandler);
-  webSocket.on("setColor", setColorSocketEventHandler);
-  webSocket.on("setColors", setColorsSocketEventHandler);
-  webSocket.on("setFives", setFivesSocketEventHandler);
-  webSocket.on("checkForUpdate", checkForUpdateSocketEventHandler);
-  webSocket.on("setMode", setModeSocketEventHandler);
-  webSocket.on("setStationId", setStationIdSocketEventHandler);
-  webSocket.begin(server_ip);
+  initWebSocket();
+  startWebSocket();
+  initUDP();
+  initArtNet();
 
-  _udp.begin(_localUdpPort); //begin listening to UDP port for incoming data
   
   pinMode(PIN_SDA, OUTPUT);
   pinMode(PIN_SCL, OUTPUT);
@@ -702,18 +973,19 @@ void setup() {
   checkForUpdate();
 
   for (int i = 0; i < LED_SEGMENT_COUNT; i++) {
-    segmentHues[i] = 0.5;
+    segmentHues[i] = 0.55;// blue
     segmentSats[i] = 1.0;
     segmentBris[i] = 1.0;
     satSteps[i] = satStepMag;
   }
   capSenseLEDUpdate();
+
+  
 }
 
 void loop() {
   webSocket.loop();
   Operate();
-  udpEvent(); //check for udp events  
   
   //check for firmware updates once every ten minutes
   EVERY_N_SECONDS(600) {
@@ -721,9 +993,8 @@ void loop() {
       checkForUpdate();
     }
   }
+
+  EVERY_N_SECONDS(280) {
+    subscribeStation(); //subscribeStation periodically to make sure we can address them in socket.io by station name
+  }
 }
-
-
-
-
-

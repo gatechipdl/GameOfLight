@@ -73,7 +73,10 @@ function paintSynthAnimation() {
             if (station_triggers[i][j]['top'].getTrigger("click", time, paintSynth_animation_interval)) {
                 Synth.play(i % 4, 'C', j+2, 3);
                 Synth.play(i % 4, 'E', j+2, 3);
-                Synth.play(i % 4, 'G', j+2, 3);
+				Synth.play(i % 4, 'G', j+2, 3);
+                //Synth.play(1, 'C', j+2, 3);
+                //Synth.play(1, 'E', j+2, 3);
+                //Synth.play(1, 'G', j+2, 3);
                 }
 			for (var k=0; k<LO_config.layers; k++) {
 				if (change_v) {
@@ -92,11 +95,13 @@ function paintSynthAnimation() {
 				}
 				if (station_triggers[i][j]['L'+k].getTrigger("click", time, paintSynth_animation_interval)) {
                     var note = String.fromCharCode(65 + k);
-                    Synth.play(i % 4, note, j+2, 3);
+					Synth.play(i % 4, note, j+2, 3);
+                    //Synth.play(1, note, j+2, 3);
 				}
 				if (station_triggers[i][j]['R'+k].getTrigger("click", time, paintSynth_animation_interval)) {
                     var note = String.fromCharCode(67 + k);
-                    Synth.play(i % 4, note, j+2, 3);
+					Synth.play(i % 4, note, j+2, 3);
+					//Synth.play(1, note, j+2, 3);
 				}                
 
 			}

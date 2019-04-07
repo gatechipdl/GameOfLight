@@ -70,6 +70,7 @@
                             <option value=4 selected>CapSenseTest</option>
                             <option value=5>CapSenseControl</option>
                             <option value=6>CapSenseControlTop</option>
+                            <option value=7>ArtNetControlled</option>
                         </select>
                     </td>
                     <td>sdfghj</td>
@@ -245,6 +246,11 @@
                 opt.value = 6;
                 opt.textContent = "CapSenseControlTop";
                 txt.appendChild(opt);
+
+                opt = document.createElement("option");
+                opt.value = 7;
+                opt.textContent = "ArtNetControlled";
+                txt.appendChild(opt);
                 
                 txt.selectedIndex = ""+stationData[key]["mode"];
 
@@ -293,28 +299,3 @@
     </script>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

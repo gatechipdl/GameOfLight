@@ -136,7 +136,7 @@ function clearRomButtons() {
 }
 
 function createRomFunctionButton(obj) {
-    var button_html = '<div class="button" id="' + obj.id + '" onclick="' + obj.function+'">' + obj.name + '</div>'
+    let button_html = '<div class="button" id="' + obj.id + '" onclick="' + obj.function+'">' + obj.name + '</div>'
     $('#menu_rom_options').append(button_html);
     if (obj.color != undefined) {
         $('#' + obj.id).css('border', '1px solid ' + obj.color);
@@ -155,9 +155,9 @@ function createRomFunctionButton(obj) {
 //creates DOM objects for LO set up based on LO_config parameters
 var mouseInLayer = {row:-1, col:-1, layer:-1, side:'none'};
 function createVisUI() {
-    for (var i = 0; i < LO_config.rows; i++) {
-        for (var j = 0; j < LO_config.cols; j++) {
-            var div_id = 'stationui_' + i + '-' + j;
+    for (let i = 0; i < LO_config.rows; i++) {
+        for (let j = 0; j < LO_config.cols; j++) {
+            let div_id = 'stationui_' + i + '-' + j;
             $('#vis_ui').append('<div id="' + div_id + '" class="station_ui"><span class="station_name">station ' + i + '-' + j + '<span></div>');
             $('#' + div_id).css('width', 100 / LO_config.cols + '%');
             $('#' + div_id).append('<div class="top"></div>');
@@ -174,7 +174,7 @@ function createVisUI() {
                 var rowcol = info[1].split('-');
                 mouseInLayer =  {row:parseInt(rowcol[0]), col:parseInt(rowcol[1]), layer:-1, side:'top'};
             });
-            for (var k = LO_config.layers - 1; k >= 0; k--) {
+            for (let k = LO_config.layers - 1; k >= 0; k--) {
                 $('#' + div_id).append('<div class="layer_' + k + ' layer"></div>')
                 $('#' + div_id + ' .layer_' + k).append('<div class="left">L' + k + '</div>');
                 $('#' + div_id + ' .layer_' + k).append('<div class="right">R' + k + '</div>');
@@ -228,12 +228,12 @@ function setLayerColorRGB(row, col, layer, r, g, b) {
         layer_color[row][col][layer].b = b;
     }
 
-    var hsv = RGBtoHSV(layer_color[row][col][layer]);
+    let hsv = RGBtoHSV(layer_color[row][col][layer]);
     layer_color[row][col][layer].h = hsv.h;
     layer_color[row][col][layer].s = hsv.s;
     layer_color[row][col][layer].v = hsv.v;
 
-    var div_id = 'stationui_' + row + '-' + col;
+    let div_id = 'stationui_' + row + '-' + col;
     $('#' + div_id + ' .layer_' + layer).css('background', 'rgba(' + layer_color[row][col][layer].r + ',' + layer_color[row][col][layer].g + ',' + layer_color[row][col][layer].b + ',1.0)');
 }
 
@@ -247,18 +247,18 @@ function setLayerColorHSV(row, col, layer, h, s, v) {
     if (v != undefined) {
         layer_color[row][col][layer].v = v;
     }
-    var rgb = HSVtoRGB(layer_color[row][col][layer]);
+    let rgb = HSVtoRGB(layer_color[row][col][layer]);
     layer_color[row][col][layer].r = rgb.r;
     layer_color[row][col][layer].g = rgb.g;
     layer_color[row][col][layer].b = rgb.b;
-    var div_id = 'stationui_' + row + '-' + col;
+    let div_id = 'stationui_' + row + '-' + col;
     $('#' + div_id + ' .layer_' + layer).css('background', 'rgba(' + layer_color[row][col][layer].r + ',' + layer_color[row][col][layer].g + ',' + layer_color[row][col][layer].b + ',1.0)');
 }
 
 function updateAllStationsColor() {
     console.log('updating all stations color');
-    for (var i = 0; i < LO_config.rows; i++) {
-        for (var j = 0; j < LO_config.cols; j++) {
+    for (let i = 0; i < LO_config.rows; i++) {
+        for (let j = 0; j < LO_config.cols; j++) {
             if (station_update[i][j] == true) {
                 setStationColor(i, j);
             }
@@ -269,13 +269,13 @@ function updateAllStationsColor() {
 
 //set all layer colors to black
 function initLayerColor() {
-    for (var i = 0; i < LO_config.rows; i++) {
+    for (let i = 0; i < LO_config.rows; i++) {
         layer_color.push([]);
         station_update.push([]);
-        for (var j = 0; j < LO_config.cols; j++) {
+        for (let j = 0; j < LO_config.cols; j++) {
             station_update[i].push(false);
             layer_color[i].push([]);
-            for (var k = 0; k < LO_config.layers; k++) {
+            for (let k = 0; k < LO_config.layers; k++) {
                 layer_color[i][j].push({
                     r: 0,
                     g: 0,
@@ -309,7 +309,7 @@ function updateAllStationsFlag() {
 
 // HSV values should be between or equals to 0 and 1
 function HSVtoRGB(h, s, v) {
-    var r, g, b, i, f, p, q, t;
+    let r, g, b, i, f, p, q, t;
     if (arguments.length === 1) {
         s = h.s, v = h.v, h = h.h;
     }
@@ -349,7 +349,7 @@ function RGBtoHSV(r, g, b) {
     if (arguments.length === 1) {
         g = r.g, b = r.b, r = r.r;
     }
-    var max = Math.max(r, g, b),
+    let max = Math.max(r, g, b),
         min = Math.min(r, g, b),
         d = max - min,
         h,
@@ -385,7 +385,7 @@ function RGBtoHSV(r, g, b) {
 // Bookmarking and Logging
 
 function addBookmark() {
-    var str = 'bookmark_' + $('#bookmark_val').val();
+    let str = 'bookmark_' + $('#bookmark_val').val();
     for (i in station_triggers) {
         for (j in station_triggers[i]) {
             for (k in station_triggers[i][j]) {
@@ -400,12 +400,12 @@ function addBookmark() {
 }
 
 function exportLog() {
-    var d = new Date();
-    var events = [];
+    let d = new Date();
+    let events = [];
     for (i in station_triggers) {
         for (j in station_triggers[i]) {
             for (k in station_triggers[i][j]) {
-                for (var m = 0; m < station_triggers[i][j][k].log.length; m++) {
+                for (let m = 0; m < station_triggers[i][j][k].log.length; m++) {
                     events.push({
                         time: station_triggers[i][j][k].log[m].time,
                         id: i + '-' + j + '_' + k,
@@ -420,22 +420,22 @@ function exportLog() {
         return a.time - b.time;
     });
 
-    var csv_rows = [];
-    var str = [];
+    let csv_rows = [];
+    let str = [];
     for (i in events[0]) {
         str.push(i);
     }
     csv_rows.push(str.join(','));
     for (i in events) {
-        var event_str = [];
+        let event_str = [];
         for (j in events[i]) {
             event_str.push(events[i][j]);
         }
         csv_rows.push(event_str.join(','));
     }
 
-    var csv_string = csv_rows.join('\r\n');
-    var a = document.createElement('a');
+    let csv_string = csv_rows.join('\r\n');
+    let a = document.createElement('a');
     a.href = 'data:attachment/csv,' + encodeURIComponent(csv_string);
     a.target = '_blank';
     a.download = 'LO-log_' + d.getTime() + '.csv';

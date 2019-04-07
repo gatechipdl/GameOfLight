@@ -38,8 +38,8 @@ socket.on('connect', function () {
 
 function setStationColor(row, col) {
     if (LO_config.layers == 5) {
-        var tData = {};
-        var stationId = address_map[row][col];
+        let tData = {};
+        let stationId = address_map[row][col];
         //tData['log'] = true;
         tData['stationId'] = stationId;
         tData['colors'] = [
@@ -55,7 +55,7 @@ function setStationColor(row, col) {
 
 function CapSenseTouchListener(socket) {
     socket.on('CapSenseTouch', function (data) {
-        var row = -1,
+        let row = -1,
             col = -1;
         for (i in address_map) {
             for (j in address_map[i]) {
@@ -67,14 +67,14 @@ function CapSenseTouchListener(socket) {
             }
         }
         if (row != -1 && col != -1) {
-            var div_id = 'stationui_' + row + '-' + col;
-            var cap = parseInt(data['sensorId']);
+            let div_id = 'stationui_' + row + '-' + col;
+            let cap = parseInt(data['sensorId']);
             console.log('cap event', row, col, cap);
             if (cap >= 0 && cap <= 4) {
-                var layer_id = 'L' + cap;
+                let layer_id = 'L' + cap;
                 station_triggers[row][col][layer_id].logState('click', true);
             } else if (cap >= 5 && cap <= 9) {
-                var layer_id = 'R' + (cap - 5);
+                let layer_id = 'R' + (cap - 5);
                 station_triggers[row][col][layer_id].logState('click', true);
             } else if (cap == 11) {
                 station_triggers[row][col]['top'].logState('click', true);

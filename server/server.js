@@ -1,6 +1,6 @@
 'use strict';
 
-const BASE_VERSION = 4009;
+var BASE_VERSION = 4024; //can be updated from data/configuration.json
 
 const express = require('express');
 const app = express();
@@ -39,6 +39,7 @@ app.get('/update/base', function (req, res) {
     console.log('a device is requesting an update');
     //console.dir(req.headers);
     if (parseInt(req.headers['x-esp8266-version']) != BASE_VERSION) { //could be <
+        if(Math.random()<0.25){ //only allow 1/4th to get the update at a time so it isn't disruptive to live installation
         var full_path = path.join(__dirname, '/bin/base' + BASE_VERSION + '.bin');
         fs.readFile(full_path, "binary", function (err, file) {
             if (err) {
@@ -60,6 +61,7 @@ app.get('/update/base', function (req, res) {
                 res.end();
             }
         });
+        }
     } else {
         console.log('not uploading new firmware');
         res.writeHeader(304, {
@@ -98,16 +100,16 @@ server.listen(_webserverPort);
 //uses json object instead of an array in order to use the mac address as the key for faster lookup
 //potential improvements - switch to an array, but build a lookup table with key value pairs for the array index
 var _stationData = {
-    "60-01-94-10-89-E1": {
-        "online": false,
-        "id": 2000,
-        "mode": 4,
-        "mac": "60-01-94-10-89-E1",
-        "ip": "192.168.0.99",
-        "name": "ESP_1089E1",
-        "socket": "sdfghj",
-        "firmware": "3005"
-    }
+    // "60-01-94-10-89-E1": {
+    //     "online": false,
+    //     "id": 2000,
+    //     "mode": 4,
+    //     "mac": "60-01-94-10-89-E1",
+    //     "ip": "192.168.0.99",
+    //     "name": "ESP_1089E1",
+    //     "socket": "sdfghj",
+    //     "firmware": "3005"
+    // }
 };
 
 
@@ -132,13 +134,30 @@ function loadStationData() {
     } catch (err) {
         console.log('stations.json file did not exist');
     }
-
 }
+
 
 
 loadStationData(); //get _stationData on server start
 resetStationData();
 
+
+var _configurationData = {};
+function loadConfiguration() {
+    try {
+        var dataFile = fs.readFileSync('./data/configuration.json');
+        _configurationData = JSON.parse(dataFile);
+        if(_configurationData.hasOwnProperty('baseversion')){
+            BASE_VERSION = _configurationData['baseversion']; //update the BASE_VERSION
+        }
+    } catch (err) {
+        console.log('configuration.json file did not exist');
+    }
+}
+loadConfiguration();
+setInterval(function(){
+    loadConfiguration();
+},60000);
 
 
 function saveStationData() {
@@ -418,7 +437,7 @@ function recoverStationDataListener(socket) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 function capSenseListener(socket) {
-    socket.on('capSense', function (data) { //TODO: modify firmware to emit use 'CapSenseEvent'
+    socket.on('capSense', function (data) {
         console.log('capsense: ' + data);
         var cData = data.split(","); //station, cap, state
         var nData = {
@@ -478,8 +497,35 @@ function setModeRawListener(socket) {
         var data64 = base64js.fromByteArray(new Uint8Array([dataRaw]));
         console.log(data64);
         //socket.broadcast.to('stations').emit('setMode',data64);  - these didn't work
-        //io.sockets.to('stations').emit('setMode',data64); - these didn't work
-        io.sockets.emit('setMode', data64);
+        if(dataRaw==72){
+            data64 = base64js.fromByteArray(new Uint8Array([7]));
+            io.sockets.to('1').emit('setMode', data64);
+            io.sockets.to('2').emit('setMode', data64);
+            io.sockets.to('3').emit('setMode', data64);
+            io.sockets.to('4').emit('setMode', data64);
+            io.sockets.to('5').emit('setMode', data64);
+            io.sockets.to('6').emit('setMode', data64);
+            io.sockets.to('7').emit('setMode', data64);
+            io.sockets.to('8').emit('setMode', data64);
+            io.sockets.to('9').emit('setMode', data64);
+            io.sockets.to('10').emit('setMode', data64);
+            io.sockets.to('11').emit('setMode', data64);
+            io.sockets.to('12').emit('setMode', data64);
+        }else{
+            if(dataRaw==52){
+                data64 = base64js.fromByteArray(new Uint8Array([5]));
+                io.sockets.to('1').emit('setMode', data64);
+                io.sockets.to('5').emit('setMode', data64);
+                io.sockets.to('9').emit('setMode', data64);
+                io.sockets.to('13').emit('setMode', data64);
+                io.sockets.to('17').emit('setMode', data64);
+                io.sockets.to('21').emit('setMode', data64);
+            }else{
+                //io.sockets.to('stations').emit('setMode',data64); - these didn't work
+                io.sockets.emit('setMode', data64);
+            }
+        }
+        
     });
 }
 
@@ -492,7 +538,8 @@ function checkForUpdatesListener(socket) {
 function setFiveHueColorsListener(socket) {
     socket.on('setFiveHueColors', function () {
         fiveColors = new Array(5).fill(new CRGB(0, 0, 0));
-        hue = (hue + 10) % hueBase;
+        //hue = (hue + 10) % hueBase;
+        hue = (hue + 1) % hueBase;
         console.log(hue);
         var t_hue = hue;
         t_hue = (hue + 10) % hueBase;
@@ -830,29 +877,40 @@ io.on('connection', function (socket) {
 
     stationDataListener(socket);
     messageListener(socket);
+    capSenseListener(socket);
 
     socket.on('subscribeStation', function (roomName) {
-        socket.join(roomName);
-        socket.join('stations');
+        if(!(socket.rooms.hasOwnProperty(roomName))){
+            socket.join(roomName);
+        }
+        if(!(socket.rooms.hasOwnProperty('stations'))){
+            socket.join('stations');
+        }
+        //console.log(socket.rooms);
 
         var tAddress = socket.handshake.address;
         var idx = tAddress.replace(/^.*:/, ''); //chop down ipv6 to ipv4
-        console.log("station client " + socket['id'] + " joined room " + roomName + " at ip: " + idx);
+        //console.log("station client " + socket['id'] + " joined room " + roomName + " at ip: " + idx);
+    });
 
-        checkForUpdate(roomName);
-        capSenseListener(socket);
-
-        socket.on('disconnect', function () {
-            Object.keys(_stationData).forEach(function (key) {
-                if (_stationData[key]['socketId'] === socket['id']) {
-                    updateStationData({
-                        [key]: {
-                            "online": false
-                        }
-                    });
-                }
-            });
+    socket.on('disconnect', function () {
+        Object.keys(_stationData).forEach(function (key) {
+            if (_stationData[key]['socketId'] === socket['id']) {
+                updateStationData({
+                    [key]: {
+                        "online": false
+                    }
+                });
+            }
         });
+    });
+
+    socket.on('disconnect', function () {
+        for (var key in clientSockets) {
+            if (clientSockets[key]['iosocket'] == socket['id']) {
+                delete clientSockets[key];
+            }
+        }
     });
 
     socket.on('subscribe', function (roomName) {
@@ -866,14 +924,7 @@ io.on('connection', function (socket) {
             'iosocket': socket['id'],
             'ipaddress': idx
         }
-
-        socket.on('disconnect', function () {
-            for (var key in clientSockets) {
-                if (clientSockets[key]['iosocket'] == socket['id']) {
-                    delete clientSockets[key];
-                }
-            }
-        });
+        
 
         if (roomName == 'browsers') {
             socket.emit('syncStationData', _stationData);

@@ -52,7 +52,7 @@
             <button onclick="emitCheckForUpdates()">Force a Request to Check for Firmware Updates</button>
         </li>
         <li>
-            <button onclick="setMode(0);">Set Mode - Slave Listener</button>
+            <button onclick="setMode(0);">Set Mode - Slave Listener (set this mode before the ones below)</button>
             <ul>
                 <li>
                     <button onclick="setMuricaColors();">MURICA</button>
@@ -96,10 +96,13 @@
             <button onclick="setMode(3);">Set Mode - Jungle Strand Test 3</button>
         </li>
         <li>
-            <button onclick="setMode(4);">Set Mode - CapSense Test</button>
+            <button onclick="setMode(4);">Set Mode - CapSense Test (for stand alone)</button>
         </li>
         <li>
-            <button onclick="setMode(5);">Set Mode - CapSense Controller</button>
+            <button onclick="setMode(52);">Set Mode - CapSense Controller (for ROMs) 1-12 only</button>
+        </li>
+        <li>
+            <button onclick="setMode(5);">Set Mode - CapSense Controller (for ROMs)</button>
         </li>
         <li>
             <button onclick="doPew=!doPew;">Toggle Pew</button>
@@ -114,6 +117,12 @@
                     <button onclick="rainbowSurgeToggle();">Toggle Rainbow Surge</button>
                 </li>
             </ul>
+        </li>
+        <li>
+            <button onclick="setMode(72);">Set Mode - ArtNet Controlled 1-12 Only</button>
+        </li>
+        <li>
+            <button onclick="setMode(7);">Set Mode - ArtNet Controlled - All</button>
         </li>
 
     </ul>
